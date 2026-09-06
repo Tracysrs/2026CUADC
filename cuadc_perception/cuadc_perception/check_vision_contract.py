@@ -15,6 +15,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
+from rclpy.task import Future
 from std_msgs.msg import Header
 from geometry_msgs.msg import PoseArray
 
@@ -61,7 +62,7 @@ class ContractChecker(Node):
             PoseArray, '/perception/drop_buckets_body', self.on_buckets, qos)
         self.create_subscription(Header, '/perception/heartbeat', self.on_hb, qos)
 
-        self._finished = False
+        self._done = Future()
         self.create_timer(self.duration, self._finish)
         self.get_logger().info(
             f'契约校验启动：采样 {self.duration:.0f}s，频率下限 {self.min_rate}Hz …')
@@ -136,8 +137,10 @@ class ContractChecker(Node):
 
     # ------------------------------------------------------------------ 收尾
     def _finish(self):
-        self._finished = True
-        rclpy.shutdown()  # 让 spin() 返回
+        # 绝不能在回调里 rclpy.shutdown()——某些 rclpy 版本会把 spin 卡死，
+        # 定时器只负责标记完成，由 spin_until_future_complete 负责返回。
+        if self._done is not None and not self._done.done():
+            self._done.set_result(True)
 
     def report(self):
         rate = self.det_count / max(0.1, self.duration)
@@ -172,11 +175,12 @@ def main(args=None):
     rclpy.init(args=args)
     node = ContractChecker()
     try:
-        rclpy.spin(node)
+        rclpy.spin_until_future_complete(node, node._done)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         all_ok = node.report()
+        sys.stdout.flush()  # 输出接管道/文件时防止缓冲丢失
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

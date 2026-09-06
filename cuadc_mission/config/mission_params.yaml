@@ -1,0 +1,59 @@
+# CUADC 任务状态机参数（M1 骨架）
+#
+# 数值基线出处：01_设计/总体方案与执行计划.md（SSOT）§5.4 —— HIT 实测值，
+# 按我们平台实测后修订；场地几何为占位值，按赛场实测/规则修订。
+# 代码对每个参数都有下限保护（见 src/mission_node.cpp 的 load_parameters）。
+# 顶层键 = 节点名（launch 里 name: cuadc_mission），改节点名必须同步改这里。
+
+cuadc_mission:
+  ros__parameters:
+    # ---- 模式 ----
+    m1_no_vision_mode: true       # M1 演练：SEARCH 飞完预设航线即转侦察段（跳过对准/投放）。M2 接入感知后必须改 false
+    auto_arm_on_guided: false     # GUIDED 后是否自动解锁；false = 飞手手动解锁（默认，更安全）
+
+    # ---- 高度（m，相对起飞点）----
+    takeoff_alt_m: 4.0            # 起飞/返航 4.0（SSOT §5.4）
+    search_alt_m: 2.0             # 搜索 2.0（4.2m 检不出桶，勿改高）
+    recon_alt_m: 4.0              # 侦察巡航高度（SSOT 未定值，待实测标定）
+    return_alt_m: 4.0
+
+    # ---- 速度（m/s）----
+    transit_speed_m_s: 4.0        # 转场/爬升/返航
+    search_speed_m_s: 2.0         # 搜索
+    recon_speed_m_s: 3.0          # 侦察
+
+    waypoint_accept_radius_m: 0.40   # 航点接受半径
+
+    # ---- 航向锁定（LOCK_FRAME：2s 内变化 ≤2° 才锁坐标系）----
+    heading_lock_window_s: 2.0
+    heading_lock_tol_deg: 2.0
+    heading_lock_timeout_s: 30.0     # 锁不上（罗盘漂移）超时判失败
+
+    # ---- 超时 ----
+    prestream_hold_s: 1.5            # 切 GUIDED 前预发 setpoint 时长
+    takeoff_timeout_s: 60.0
+    mission_timeout_s: 240.0         # 任务总超时（比赛 5 分钟）
+    odom_timeout_s: 1.0              # odom 断流 >1s 视为过期（SSOT §10.2-8）
+    recon_photo_timeout_s: 1.0       # 每视点拍照确认等待兜底
+
+    # ---- 降落确认（LAND/DISARM：≤0.30m + 速度门限 + 稳定 1.5s 才算落地）----
+    landing_confirm_s: 1.5
+    landing_alt_gate_m: 0.30
+    landing_hspeed_gate_m_s: 0.20
+    landing_vspeed_gate_m_s: 0.15
+
+    # ---- 场地几何（场地坐标系：原点=起飞点，x 朝起飞时机头方向；以下为占位值）----
+    search_x_min_m: 6.0              # 搜索区 X 范围
+    search_x_max_m: 10.0
+    search_half_width_m: 2.0         # 搜索区半宽（Y 方向）
+    search_lanes: 4                  # 搜索带数（弓字形，奇偶带交替方向）
+    recon_x_m: 14.0                  # 侦察区起始 X
+    recon_lane_len_m: 2.0            # 每条侦察带长度（X 方向）
+    recon_half_width_m: 2.0          # 侦察区半宽（Y 方向）
+    recon_lanes: 3                   # 侦察带数 ×2 端点 = 6 航点（SSOT §5.1 蛇形6航点）
+
+    # ---- 时间同步（P0.4，SSOT §4.3 容差照抄，设计见 10_机载代码/时间同步设计.md）----
+    perception_max_delay_s: 1.5      # 感知管线延迟上界：帧龄超此值丢弃
+    odom_future_tol_s: 0.05          # 未来戳容差：超此值视为时钟错乱丢弃
+    odom_interp_max_gap_s: 0.2       # 包围两帧最大间隔：断流段内不插值
+    odom_history_span_s: 3.0         # odom 历史时间窗

@@ -1,0 +1,110 @@
+# CUAV Pixhawk V6X v2 + Jetson Orin Nano 竞赛配置（ArduPilot 版）
+# 用途：多旋翼无人机侦察与救援（全自动 GUIDED 模式）
+# 固件：V6X v2 板型为 CUAV-V6X-v2，ArduPilot 官方仅提供 beta 固件
+#   https://firmware.ardupilot.org/Copter/beta/CUAV-V6X-v2/arducopter.apj
+#   已验证版本 git dbe79216（存档于 设计/firmware/arducopter_beta_CUAV-V6X-v2.apj）
+#   ⚠️ 此 beta 为新一代参数命名（SI 单位后缀）+ 懒加载参数组：
+#     - WPNAV_SPEED → WP_SPD（单位 m/s），LAND_SPEED → LAND_SPD_MS，FS_GCS_ENABL → FS_GCS_ENABLE
+#     - RNGFND1_*/PLND_TYPE 在功能开启并重启前不存在 → 参数需【导入两遍，中间重启】
+#   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
+# 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
+# 注意：导入前先在原机上"保存参数到文件"做备份（已有 param_backup_*.param 可用）
+# 串口映射（ArduPilot）：SERIAL0=USB  SERIAL1=TELEM1  SERIAL2=TELEM2
+
+# ---------- 0. 机架（新固件默认 FRAME_CLASS=0 未定义，必须显式设置） ----------
+FRAME_CLASS,1
+FRAME_TYPE,1
+
+# ---------- 1. 链路：TELEM1 -> 数传电台（地面站） ----------
+# MAVLink2 + 57600，与 SiK 数传出厂波特率一致
+SERIAL1_PROTOCOL,2
+SERIAL1_BAUD,57
+
+# ---------- 2. 链路：TELEM2 -> Orin Nano（机载计算机） ----------
+# MAVLink2 + 921600；线缆只有 TX/RX/GND 时必须关流控，否则完全不通
+SERIAL2_PROTOCOL,2
+SERIAL2_BAUD,921
+BRD_SER2_RTSCTS,0
+
+# ---------- 3. 失效保护（比赛全程禁止人工操纵，由机载状态机兜底） ----------
+# 数传断链不动作：断链只影响"地面看数据"，不能让飞机自己乱飞
+FS_GCS_ENABLE,0
+# 遥控断链：当前值 5=RTL 是【地面调试期】的安全值；比赛上场前必须改回 0
+# （比赛无人工操纵，由机载状态机兜底；改 0 后断链完全静默，务必赛前核对）
+FS_THR_ENABLE,5
+
+# ---------- 3b. ELRS 接收机（地面调试用，比赛可不上接收机） ----------
+# CRSF 协议接收机接 UART4 口（即 SERIAL6）：
+# SERIAL6_PROTOCOL,23
+# SERIAL6_OPTIONS,0
+
+# ---------- 4. 运动限制（新固件参数名，单位 m/s；旧 WPNAV_*/GUIDS_* 命名已废除） ----------
+# 自动/GUIDED 巡航 4 m/s；上升 3 m/s；下降 1.5 m/s（旧名 WPNAV_SPEED,400 等）
+WP_SPD,4
+WP_SPD_UP,3
+WP_SPD_DN,1.5
+# 旧 GUIDS_SPEED/CLIMB/DESCEND/ANGLE 在新固件中不存在：
+# GUIDED 位置目标速度由 WP_SPD 控制，倾斜限幅由 ATC_ANGLE_MAX 控制
+# 最大倾斜 35°
+ATC_ANGLE_MAX,3500
+# 降落速度 0.5 m/s（旧 LAND_SPEED,50；精准降落时 PLND 自行控制速度）
+LAND_SPD_MS,0.5
+
+# ---------- 5. EKF3 定位源（仅 GPS；换 VIO 时见下方注释） ----------
+EK3_SRC1_POSXY,3
+EK3_SRC1_POSZ,1
+EK3_SRC1_VELXY,3
+# 4m 以下激光辅助定高（方案 §3.2："EKF2_RNG_CTRL=1" 为 PX4 参数名，ArduPilot 对应此参数）
+# 依赖下方 TFmini（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
+EK3_RNG_USE_HGT,4
+# 用视觉里程计（VIO）时改为 ExternalNav 并核对 EK3_SRC 相关项：
+# EK3_SRC1_POSXY,6
+# EK3_SRC1_VELXY,6
+
+# ---------- 5b. TFmini 激光定高（接 TELEM3 = SERIAL5；接其他口就改对应 SERIALx 两行） ----------
+# 串口：协议 11=RangeFinder，波特率 115=115200（TFmini 出厂默认）
+SERIAL5_PROTOCOL,11
+SERIAL5_BAUD,115
+# 驱动：20=Benewake TFmini（串口版；25 才是 I2C 版 TFmini）
+# 懒加载：RNGFND1_TYPE 写入并重启后，MIN/MAX/GNDCLR 等子参数才会出现 → 需第二遍导入
+# （名字已实测确认：这版固件里 RNGFND1_MIN/MAX 沿用旧命名，单位 m）
+RNGFND1_TYPE,20
+RNGFND1_ORIENT,25
+RNGFND1_MIN,0.3
+RNGFND1_MAX,12
+RNGFND1_SCALING,1
+# 飞机着陆时传感器离地高度（按实际安装高度改）
+RNGFND1_GNDCLR,0.1
+
+# ---------- 6. 精准降落（Orin 发 LANDING_TARGET，飞控 PLND 模块执行） ----------
+# ⚠️ PLND_TYPE=0 是 CompanionComputer（收 MAVLink LANDING_TARGET）
+#    1 是 IR-LOCK 红外信标——不是我们的架构，勿改回 1（旧文件此处写错了）
+# 懒加载：PLND_ENABLED=1 写入并重启后，PLND_TYPE 等 PLND_* 参数才会出现 → 需第二遍导入
+PLND_ENABLED,1
+PLND_TYPE,0
+
+# ---------- 7. 投放舵机（对应 PX4 AUX 输出） ----------
+# V6X 带 IOMCU：AUX1/AUX2 口对应 SERVO9/SERVO10 参数（MAIN1/2 则是 SERVO1/2）
+# 功能必须设 0（None），MAV_CMD_DO_SET_SERVO 才能直接控
+# ArduPilot 舵机输出默认 50Hz；解锁前输出 SERVOx_TRIM=1500 保持中立
+SERVO9_FUNCTION,0
+SERVO10_FUNCTION,0
+
+# ---------- 7b. 电池计（标配 CAN PMU lite，接 Power C1/C2，DroneCAN） ----------
+# CUAV 手册要求三件套；缺了就没有电压/电流读数（P1-2 验收：读数误差 <5%）
+# 注意：不能用 MP 的 Battery Monitor 设置向导（那是模拟电源模块用的）
+BATT_MONITOR,8
+CAN_P1_DRIVER,1
+CAN_P2_DRIVER,1
+
+# ---------- 8. 日志 ----------
+# 未解锁也记录，方便排查地面问题
+LOG_DISARMED,1
+
+# ---------- 重要差异提醒（PX4 -> ArduPilot） ----------
+# 1. ArduPilot GUIDED 没有 PX4 的 offboard 断链失效保护（无 COM_OF_LOSS_T 等价物）：
+#    速度 setpoint 断流后飞机会保持最后速度继续飞！状态机必须自带看护：
+#    - 优先发位置 setpoint（断流=悬停原地），速度 setpoint 只短时使用
+#    - Orin 侧监测状态机心跳，超时立即切位置保持并记录日志
+# 2. 控制/导航模式用 GUIDED（对应 PX4 OFFBOARD），MAVROS 侧 apm.launch 接入
+# 3. 起飞用 MAV_CMD_NAV_TAKEOFF，MAVROS /mavros/cmd/takeoff 服务

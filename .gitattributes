@@ -1,0 +1,6 @@
+# 统一换行符：仓库内一律 LF（部分脚本会跑在 Linux/Jetson 上）
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.apj binary

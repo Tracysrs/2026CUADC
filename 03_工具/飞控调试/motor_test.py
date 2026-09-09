@@ -29,8 +29,14 @@ ACK_NAMES = {0: "ACCEPTED", 1: "TEMPORARILY_REJECTED", 2: "DENIED",
 
 def connect(port):
     print(f"[conn] trying {port} @ {BAUD} ...")
-    m = mavutil.mavlink_connection(port, baud=BAUD, timeout=3)
-    hb = m.wait_heartbeat(timeout=6)
+    try:
+        m = mavutil.mavlink_connection(port, baud=BAUD, timeout=3)
+        hb = m.wait_heartbeat(timeout=6)
+    except Exception as e:
+        # 口不存在/被占用（MP 开着、USB 拔掉等）在这里抛异常，必须吞掉，
+        # 否则主流程走不到下面的自动扫描分支（2026-09-09 踩坑）
+        print(f"[conn] {port} 不可用: {type(e).__name__}")
+        return None, None
     if hb is None:
         m.close()
         return None, None

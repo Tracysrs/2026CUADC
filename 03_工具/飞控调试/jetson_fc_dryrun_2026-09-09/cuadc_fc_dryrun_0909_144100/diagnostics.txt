@@ -1,0 +1,99 @@
+header:
+  stamp:
+    sec: 1788936134
+    nanosec: 687805320
+  frame_id: ''
+status:
+- level: "\0"
+  name: 'mavros_router: MAVROS Router'
+  message: ok
+  hardware_id: none
+  values:
+  - key: Endpoints
+    value: '3'
+  - key: Messages routed
+    value: '18431'
+  - key: Messages sent
+    value: '36841'
+  - key: Messages dropped
+    value: '0'
+- level: "\0"
+  name: 'mavros_router: endpoint 1000: /dev/cuadc-fc:115200'
+  message: ok
+  hardware_id: none
+  values:
+  - key: Received packets
+    value: '17396'
+  - key: Dropped packets
+    value: '0'
+  - key: Buffer overruns
+    value: '0'
+  - key: Parse errors
+    value: '0'
+  - key: Rx sequence number
+    value: '77'
+  - key: Tx sequence number
+    value: '0'
+  - key: Rx total bytes
+    value: '585244'
+  - key: Tx total bytes
+    value: '26499'
+  - key: Rx speed
+    value: '8361.000000'
+  - key: Tx speed
+    value: '362.000000'
+  - key: Remotes count
+    value: '3'
+  - key: Remote [0]
+    value: '0.0'
+  - key: Remote [1]
+    value: '1.0'
+  - key: Remote [2]
+    value: '1.1'
+- level: "\0"
+  name: 'mavros_router: endpoint 1001: tcp-l://0.0.0.0:14550'
+  message: ok
+  hardware_id: none
+  values:
+  - key: Received packets
+    value: '172'
+  - key: Dropped packets
+    value: '0'
+  - key: Buffer overruns
+    value: '0'
+  - key: Parse errors
+    value: '0'
+  - key: Rx sequence number
+    value: '0'
+  - key: Tx sequence number
+    value: '0'
+  - key: Rx total bytes
+    value: '3587'
+  - key: Tx total bytes
+    value: '602121'
+  - key: Rx speed
+    value: '42.000000'
+  - key: Tx speed
+    value: '8681.000000'
+  - key: Remotes count
+    value: '3'
+  - key: Remote [0]
+    value: '0.0'
+  - key: Remote [1]
+    value: '255.0'
+  - key: Remote [2]
+    value: '255.190'
+- level: "\0"
+  name: 'mavros_router: endpoint 1002: /uas1'
+  message: ok
+  hardware_id: none
+  values:
+  - key: Remotes count
+    value: '3'
+  - key: Remote [0]
+    value: '0.0'
+  - key: Remote [1]
+    value: '1.0'
+  - key: Remote [2]
+    value: '1.191'
+---

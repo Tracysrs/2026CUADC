@@ -1,0 +1,6 @@
+waiting for service to become available...
+requester: making request: mavros_msgs.srv.SetMode_Request(base_mode=0, custom_mode='GUIDED')
+
+response:
+mavros_msgs.srv.SetMode_Response(mode_sent=True)
+

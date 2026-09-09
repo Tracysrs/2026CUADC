@@ -1,0 +1,12 @@
+header:
+  stamp:
+    sec: 1788936132
+    nanosec: 478065740
+  frame_id: ''
+airspeed: 0.0
+groundspeed: 0.002725344616919756
+heading: 227
+throttle: 0.0
+altitude: 0.019999999552965164
+climb: -0.057213954627513885
+---

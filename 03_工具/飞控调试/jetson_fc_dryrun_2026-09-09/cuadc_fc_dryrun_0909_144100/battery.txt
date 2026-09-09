@@ -1,0 +1,22 @@
+header:
+  stamp:
+    sec: 1788936129
+    nanosec: 381057648
+  frame_id: ''
+voltage: 22.421001434326172
+temperature: 0.0
+current: -0.05999999865889549
+charge: .nan
+capacity: .nan
+design_capacity: .nan
+percentage: 0.33000001311302185
+power_supply_status: 2
+power_supply_health: 0
+power_supply_technology: 0
+present: true
+cell_voltage:
+- 22.421001434326172
+cell_temperature: []
+location: id0
+serial_number: ''
+---

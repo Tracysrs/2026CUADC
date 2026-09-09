@@ -1,0 +1,6 @@
+waiting for service to become available...
+requester: making request: mavros_msgs.srv.CommandBool_Request(value=True)
+
+response:
+mavros_msgs.srv.CommandBool_Response(success=False, result=4)
+

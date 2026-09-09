@@ -1,0 +1,3 @@
+[INFO] [1788936143.559612384] [cuadc_mission]: CUADC mission node ready [cuadc-m3-2026-09]
+[WARN] [1788936143.559937435] [cuadc_mission]: M1 无视觉演练模式：SEARCH 飞预设航线后跳过对准/投放，直接转侦察段。正式飞行必须设 m1_no_vision_mode:=false
+[INFO] [1788936144.810047507] [cuadc_mission]: STATE -> WAIT_NAV_STABLE

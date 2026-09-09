@@ -5,7 +5,10 @@
 #   已验证版本 git dbe79216（存档于 设计/firmware/arducopter_beta_CUAV-V6X-v2.apj）
 #   ⚠️ 此 beta 为新一代参数命名（SI 单位后缀）+ 懒加载参数组：
 #     - WPNAV_SPEED → WP_SPD（单位 m/s），LAND_SPEED → LAND_SPD_MS，FS_GCS_ENABL → FS_GCS_ENABLE
+#     - BATT_LOW → BATT_LOW_VOLT、BATT_CRT → BATT_CRT_VOLT（写不存在的旧名会被静默忽略）
 #     - RNGFND1_*/PLND_TYPE 在功能开启并重启前不存在 → 参数需【导入两遍，中间重启】
+#   ⚠️ 当前含 3 处临时值（TFmini/GPS 未到货，各节有 ⚠️ 标注，到货后恢复）：
+#     RNGFND1_TYPE / EK3_RNG_USE_HGT / BRD_SAFETY_DEFLT
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
 # 注意：导入前先在原机上"保存参数到文件"做备份（已有 param_backup_*.param 可用）
@@ -14,6 +17,10 @@
 # ---------- 0. 机架（新固件默认 FRAME_CLASS=0 未定义，必须显式设置） ----------
 FRAME_CLASS,1
 FRAME_TYPE,1
+
+# ---------- 0b. 电调输出（好盈 XRotor 40A，OPTO 无 BEC） ----------
+# 输出刷新率：默认 490Hz 超出电调规格（50~450Hz），2026-09-09 真机已改 200
+RC_SPEED,200
 
 # ---------- 1. 链路：TELEM1 -> 数传电台（地面站） ----------
 # MAVLink2 + 57600，与 SiK 数传出厂波特率一致
@@ -37,6 +44,7 @@ FS_THR_ENABLE,5
 # CRSF 协议接收机接 UART4 口（即 SERIAL6）：
 # SERIAL6_PROTOCOL,23
 # SERIAL6_OPTIONS,0
+# （2026-09-09 真机误配过 CRSF 后已还原默认 -1/57/0，与本注释状态一致，快照可证）
 
 # ---------- 4. 运动限制（新固件参数名，单位 m/s；旧 WPNAV_*/GUIDS_* 命名已废除） ----------
 # 自动/GUIDED 巡航 4 m/s；上升 3 m/s；下降 1.5 m/s（旧名 WPNAV_SPEED,400 等）
@@ -45,8 +53,9 @@ WP_SPD_UP,3
 WP_SPD_DN,1.5
 # 旧 GUIDS_SPEED/CLIMB/DESCEND/ANGLE 在新固件中不存在：
 # GUIDED 位置目标速度由 WP_SPD 控制，倾斜限幅由 ATC_ANGLE_MAX 控制
-# 最大倾斜 35°
-ATC_ANGLE_MAX,3500
+# 最大倾斜 35°（⚠️ beta 固件此参数单位已改"度"：centidegrees 旧值 3500 会触发
+# PreArm "must be >= 10 and <= 80"；2026-09-09 真机已改并回读对账）
+ATC_ANGLE_MAX,35
 # 降落速度 0.5 m/s（旧 LAND_SPEED,50；精准降落时 PLND 自行控制速度）
 LAND_SPD_MS,0.5
 
@@ -56,7 +65,8 @@ EK3_SRC1_POSZ,1
 EK3_SRC1_VELXY,3
 # 4m 以下激光辅助定高（方案 §3.2："EKF2_RNG_CTRL=1" 为 PX4 参数名，ArduPilot 对应此参数）
 # 依赖下方 TFmini（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
-EK3_RNG_USE_HGT,4
+# ⚠️ 临时=0：TFmini 未到货，2026-09-09 与 RNGFND1_TYPE 同轮禁用；接 TELEM3 后恢复 4
+EK3_RNG_USE_HGT,0
 # 用视觉里程计（VIO）时改为 ExternalNav 并核对 EK3_SRC 相关项：
 # EK3_SRC1_POSXY,6
 # EK3_SRC1_VELXY,6
@@ -68,7 +78,9 @@ SERIAL5_BAUD,115
 # 驱动：20=Benewake TFmini（串口版；25 才是 I2C 版 TFmini）
 # 懒加载：RNGFND1_TYPE 写入并重启后，MIN/MAX/GNDCLR 等子参数才会出现 → 需第二遍导入
 # （名字已实测确认：这版固件里 RNGFND1_MIN/MAX 沿用旧命名，单位 m）
-RNGFND1_TYPE,20
+# ⚠️ 临时=0：TFmini 未到货，2026-09-09 禁用（SERIAL5 两行与子参数保留不动）；
+# 到货接 TELEM3 后恢复 20
+RNGFND1_TYPE,0
 RNGFND1_ORIENT,25
 RNGFND1_MIN,0.3
 RNGFND1_MAX,12
@@ -96,10 +108,33 @@ SERVO10_FUNCTION,0
 BATT_MONITOR,8
 CAN_P1_DRIVER,1
 CAN_P2_DRIVER,1
+# 实际电池 6S 8000mAh（2026-09-09 写入；原容量 3300 / 阈值 10.5V 均为 3S 默认值）
+# 电池标签 22.2V 是"标称"电压，不是满电：满电 25.2(4.20V/c)、存储 ≈22.9、标称 22.2(3.7V/c)
+# 三级电压：低电 21.6(3.6V/c) / 严重 21.0(3.5V/c) / 解锁门槛 22.5(3.75V/c)
+# 解锁门槛取 22.5 的区间推理：
+#   下限 = 低电阈值 21.6 + 悬停带载压降(6S 8000 约 0.6~1.0V) ≈ 22.5
+#     —— 低于它解锁后一上负载就跌入低电区，起飞即触发低电失效保护
+#   上限 ≈ 23.8 —— 再高短飞落地(静止 ~23.2-23.5)无法复飞（24.5 版教训）
+#   22.5 介于标称与存储之间：存储态 22.92 可解锁；刚触发严重保护落地的电池
+#   （静止回升 ~22.0-22.2）拒绝解锁，强制换电
+# ⚠️ 真机当前仍写 24.5，下次连机改写 22.5 并回读核验（见 09-09 日志 §四）
+BATT_CAPACITY,8000
+BATT_LOW_VOLT,21.6
+BATT_CRT_VOLT,21.0
+BATT_ARM_VOLT,22.5
+# 低电/严重低电的空中动作（2026-09-09 真机写入并回读；此前一直 0=只报不动作，
+# 三级保护缺空中动作一半，见 09-09 日志）：低电 RTL(2)、严重 Land(1)
+BATT_FS_LOW_ACT,2
+BATT_FS_CRT_ACT,1
 
 # ---------- 8. 日志 ----------
 # 未解锁也记录，方便排查地面问题
 LOG_DISARMED,1
+
+# ---------- 9. 安全开关（⚠️ 临时） ----------
+# 0=上电默认不启用安全锁：无 GPS 阶段便于未解锁电机测试（IO 输出口静默问题的
+# 配套项，见 2026-09-09 日志 §五）；NEO-3 GPS 到货后恢复 1
+BRD_SAFETY_DEFLT,0
 
 # ---------- 重要差异提醒（PX4 -> ArduPilot） ----------
 # 1. ArduPilot GUIDED 没有 PX4 的 offboard 断链失效保护（无 COM_OF_LOSS_T 等价物）：

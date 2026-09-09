@@ -1,0 +1,152 @@
+header:
+  stamp:
+    sec: 1788936136
+    nanosec: 270235539
+  frame_id: ''
+severity: 2
+text: 'PreArm: 3D Accel calibration needed'
+---
+header:
+  stamp:
+    sec: 1788936136
+    nanosec: 270776278
+  frame_id: ''
+severity: 2
+text: 'PreArm: Compass not calibrated'
+---
+header:
+  stamp:
+    sec: 1788936136
+    nanosec: 271309366
+  frame_id: ''
+severity: 2
+text: 'PreArm: Battery 1 below minimum arming voltage'
+---
+header:
+  stamp:
+    sec: 1788936136
+    nanosec: 271721761
+  frame_id: ''
+severity: 2
+text: 'PreArm: Radio failsafe on'
+---
+header:
+  stamp:
+    sec: 1788936167
+    nanosec: 273902752
+  frame_id: ''
+severity: 2
+text: 'PreArm: 3D Accel calibration needed'
+---
+header:
+  stamp:
+    sec: 1788936167
+    nanosec: 276212126
+  frame_id: ''
+severity: 2
+text: 'PreArm: Compass not calibrated'
+---
+header:
+  stamp:
+    sec: 1788936167
+    nanosec: 276707287
+  frame_id: ''
+severity: 2
+text: 'PreArm: GPS 1: Bad fix'
+---
+header:
+  stamp:
+    sec: 1788936167
+    nanosec: 276958948
+  frame_id: ''
+severity: 2
+text: 'PreArm: Battery 1 below minimum arming voltage'
+---
+header:
+  stamp:
+    sec: 1788936167
+    nanosec: 277197103
+  frame_id: ''
+severity: 2
+text: 'PreArm: Radio failsafe on'
+---
+header:
+  stamp:
+    sec: 1788936198
+    nanosec: 278990253
+  frame_id: ''
+severity: 2
+text: 'PreArm: 3D Accel calibration needed'
+---
+header:
+  stamp:
+    sec: 1788936198
+    nanosec: 279689641
+  frame_id: ''
+severity: 2
+text: 'PreArm: Compass not calibrated'
+---
+header:
+  stamp:
+    sec: 1788936198
+    nanosec: 280095153
+  frame_id: ''
+severity: 2
+text: 'PreArm: GPS 1: Bad fix'
+---
+header:
+  stamp:
+    sec: 1788936198
+    nanosec: 280331996
+  frame_id: ''
+severity: 2
+text: 'PreArm: Battery 1 below minimum arming voltage'
+---
+header:
+  stamp:
+    sec: 1788936198
+    nanosec: 280546082
+  frame_id: ''
+severity: 2
+text: 'PreArm: Radio failsafe on'
+---
+header:
+  stamp:
+    sec: 1788936229
+    nanosec: 282162260
+  frame_id: ''
+severity: 2
+text: 'PreArm: 3D Accel calibration needed'
+---
+header:
+  stamp:
+    sec: 1788936229
+    nanosec: 282644682
+  frame_id: ''
+severity: 2
+text: 'PreArm: Compass not calibrated'
+---
+header:
+  stamp:
+    sec: 1788936229
+    nanosec: 282813703
+  frame_id: ''
+severity: 2
+text: 'PreArm: GPS 1: Bad fix'
+---
+header:
+  stamp:
+    sec: 1788936229
+    nanosec: 282957441
+  frame_id: ''
+severity: 2
+text: 'PreArm: Battery 1 below minimum arming voltage'
+---
+header:
+  stamp:
+    sec: 1788936229
+    nanosec: 283095865
+  frame_id: ''
+severity: 2
+text: 'PreArm: Radio failsafe on'
+---

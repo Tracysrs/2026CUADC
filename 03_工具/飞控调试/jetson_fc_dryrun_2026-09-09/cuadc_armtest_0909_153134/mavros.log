@@ -1,0 +1,211 @@
+[INFO] [launch]: All log files can be found below /home/nvidia/.ros/log/2026-09-09-15-31-36-264023-nvidia-desktop-9497
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [mavros_node-1]: process started with pid [9500]
+[mavros_node-1] [INFO] [1788939096.604035862] [mavros.mavros_node]: Starting mavros_node container
+[mavros_node-1] [INFO] [1788939096.604250592] [mavros.mavros_node]: FCU URL: /dev/cuadc-fc:115200
+[mavros_node-1] [INFO] [1788939096.604280354] [mavros.mavros_node]: GCS URL: tcp-l://0.0.0.0:14550
+[mavros_node-1] [INFO] [1788939096.604293218] [mavros.mavros_node]: UAS Prefix: /uas1
+[mavros_node-1] [INFO] [1788939096.604303555] [mavros.mavros_node]: Starting mavros router node
+[mavros_node-1] [INFO] [1788939096.615313956] [mavros.mavros_router]: Built-in SIMD instructions: ARM NEON
+[mavros_node-1] [INFO] [1788939096.615378983] [mavros.mavros_router]: Built-in MAVLink package version: 2026.6.6
+[mavros_node-1] [INFO] [1788939096.615397800] [mavros.mavros_router]: Known MAVLink dialects: common ardupilotmega ASLUAV AVSSUAS all csAirLink cubepilot development icarous loweheiser marsh matrixpilot paparazzi standard stemstudios storm32 uAvionix ualberta
+[mavros_node-1] [INFO] [1788939096.615410665] [mavros.mavros_router]: MAVROS Router started
+[mavros_node-1] [INFO] [1788939096.615522414] [mavros.mavros_node]: Starting mavros uas node
+[mavros_node-1] [INFO] [1788939096.666993454] [mavros.mavros_router]: Requested to add endpoint: type: 0, url: /dev/cuadc-fc:115200
+[mavros_node-1] [INFO] [1788939096.667121140] [mavros.mavros_router]: Endpoint link[1000] created
+[mavros_node-1] [INFO] [1788939096.669055759] [mavros.mavros_router]: link[1000] opened successfully
+[mavros_node-1] [INFO] [1788939096.669116913] [mavros.mavros_router]: Requested to add endpoint: type: 1, url: tcp-l://0.0.0.0:14550
+[mavros_node-1] [INFO] [1788939096.669173236] [mavros.mavros_router]: link[1000] detected remote address 1.1
+[mavros_node-1] [INFO] [1788939096.669204982] [mavros.mavros_router]: Endpoint link[1001] created
+[mavros_node-1] [INFO] [1788939096.669859892] [mavros.mavros_router]: link[1001] opened successfully
+[mavros_node-1] [INFO] [1788939096.669926007] [mavros.mavros_router]: Requested to add endpoint: type: 2, url: /uas1
+[mavros_node-1] [INFO] [1788939096.670001787] [mavros.mavros_router]: Endpoint link[1002] created
+[mavros_node-1] [INFO] [1788939096.673445755] [mavros.mavros_router]: link[1002] opened successfully
+[mavros_node-1] [INFO] [1788939096.676913181] [mavros.mavros]: Plugin actuator_control ignored
+[mavros_node-1] [INFO] [1788939096.677052996] [mavros.mavros]: UAS Executor started, threads: 6
+[mavros_node-1] [INFO] [1788939096.717693739] [mavros.mavros]: Plugin adsb created
+[mavros_node-1] [INFO] [1788939096.717823377] [mavros.mavros]: Plugin adsb initialized
+[mavros_node-1] [INFO] [1788939096.717861139] [mavros.mavros]: Plugin altitude ignored
+[mavros_node-1] [INFO] [1788939096.726956315] [mavros.mavros]: Plugin cam_imu_sync created
+[mavros_node-1] [INFO] [1788939096.727050911] [mavros.mavros]: Plugin cam_imu_sync initialized
+[mavros_node-1] [INFO] [1788939096.736325808] [mavros.mavros]: Plugin camera created
+[mavros_node-1] [INFO] [1788939096.736419380] [mavros.mavros]: Plugin camera initialized
+[mavros_node-1] [INFO] [1788939096.745631010] [mavros.mavros]: Plugin cellular_status created
+[mavros_node-1] [INFO] [1788939096.745713318] [mavros.mavros]: Plugin cellular_status initialized
+[mavros_node-1] [INFO] [1788939096.780561343] [mavros.mavros]: Plugin command created
+[mavros_node-1] [INFO] [1788939096.780707046] [mavros.mavros]: Plugin command initialized
+[mavros_node-1] [INFO] [1788939096.790781435] [mavros.mavros]: Plugin companion_process_status created
+[mavros_node-1] [INFO] [1788939096.790869887] [mavros.mavros]: Plugin companion_process_status initialized
+[mavros_node-1] [INFO] [1788939096.790899873] [mavros.mavros]: Plugin debug_value ignored
+[mavros_node-1] [INFO] [1788939096.801230211] [mavros.distance_sensor]: DS: rangefinder_pub: Loading config: id: 0
+[mavros_node-1] frame_id: lidar
+[mavros_node-1] field_of_view: 0.0
+[mavros_node-1] send_tf: false
+[mavros_node-1] sensor_position: {x: 0.0, y: 0.0, z: -0.1}
+[mavros_node-1] [INFO] [1788939096.803213663] [mavros.distance_sensor]: DS: rangefinder_sub: Loading config: subscriber: true
+[mavros_node-1] id: 1
+[mavros_node-1] orientation: PITCH_270
+[mavros_node-1] [INFO] [1788939096.803908128] [mavros.mavros]: Plugin distance_sensor created
+[mavros_node-1] [INFO] [1788939096.804039334] [mavros.mavros]: Plugin distance_sensor initialized
+[mavros_node-1] [INFO] [1788939096.815506908] [mavros.mavros]: Plugin esc_status created
+[mavros_node-1] [INFO] [1788939096.815605857] [mavros.mavros]: Plugin esc_status initialized
+[mavros_node-1] [INFO] [1788939096.826522558] [mavros.mavros]: Plugin esc_telemetry created
+[mavros_node-1] [INFO] [1788939096.826635619] [mavros.mavros]: Plugin esc_telemetry initialized
+[mavros_node-1] [INFO] [1788939096.839727302] [mavros.mavros]: Plugin fake_gps created
+[mavros_node-1] [INFO] [1788939096.839815082] [mavros.mavros]: Plugin fake_gps initialized
+[mavros_node-1] [INFO] [1788939096.839842283] [mavros.mavros]: Plugin ftp ignored
+[mavros_node-1] [INFO] [1788939096.854165127] [mavros.mavros]: Plugin geofence created
+[mavros_node-1] [INFO] [1788939096.854303918] [mavros.mavros]: Plugin geofence initialized
+[mavros_node-1] [INFO] [1788939096.874608097] [mavros.mavros]: Plugin gimbal_control created
+[mavros_node-1] [INFO] [1788939096.874734407] [mavros.mavros]: Plugin gimbal_control initialized
+[mavros_node-1] [INFO] [1788939096.895566322] [mavros.mavros]: Plugin global_position created
+[mavros_node-1] [INFO] [1788939096.895702744] [mavros.mavros]: Plugin global_position initialized
+[mavros_node-1] [INFO] [1788939096.908931489] [mavros.mavros]: Plugin gps_input created
+[mavros_node-1] [INFO] [1788939096.909063912] [mavros.mavros]: Plugin gps_input initialized
+[mavros_node-1] [INFO] [1788939096.922784423] [mavros.mavros]: Plugin gps_rtk created
+[mavros_node-1] [INFO] [1788939096.922890188] [mavros.mavros]: Plugin gps_rtk initialized
+[mavros_node-1] [INFO] [1788939096.937841606] [mavros.mavros]: Plugin gps_status created
+[mavros_node-1] [INFO] [1788939096.937974220] [mavros.mavros]: Plugin gps_status initialized
+[mavros_node-1] [INFO] [1788939096.952234341] [mavros.mavros]: Plugin guided_target created
+[mavros_node-1] [INFO] [1788939096.952349226] [mavros.mavros]: Plugin guided_target initialized
+[mavros_node-1] [INFO] [1788939096.952379532] [mavros.mavros]: Plugin hil ignored
+[mavros_node-1] [INFO] [1788939096.968217614] [mavros.mavros]: Plugin home_position created
+[mavros_node-1] [INFO] [1788939096.968376790] [mavros.mavros]: Plugin home_position initialized
+[mavros_node-1] [INFO] [1788939096.987202564] [mavros.mavros]: Plugin imu created
+[mavros_node-1] [INFO] [1788939096.987346186] [mavros.mavros]: Plugin imu initialized
+[mavros_node-1] [INFO] [1788939097.005987215] [mavros.mavros]: Plugin landing_target created
+[mavros_node-1] [INFO] [1788939097.006154774] [mavros.mavros]: Plugin landing_target initialized
+[mavros_node-1] [INFO] [1788939097.025996387] [mavros.mavros]: Plugin local_position created
+[mavros_node-1] [INFO] [1788939097.026132106] [mavros.mavros]: Plugin local_position initialized
+[mavros_node-1] [INFO] [1788939097.046772731] [mavros.mavros]: Plugin log_transfer created
+[mavros_node-1] [INFO] [1788939097.046912322] [mavros.mavros]: Plugin log_transfer initialized
+[mavros_node-1] [INFO] [1788939097.063854570] [mavros.mavros]: Plugin mag_calibration_status created
+[mavros_node-1] [INFO] [1788939097.064031154] [mavros.mavros]: Plugin mag_calibration_status initialized
+[mavros_node-1] [INFO] [1788939097.081703132] [mavros.mavros]: Plugin manual_control created
+[mavros_node-1] [INFO] [1788939097.081881060] [mavros.mavros]: Plugin manual_control initialized
+[mavros_node-1] [INFO] [1788939097.099393382] [mavros.mavros]: Plugin mocap_pose_estimate created
+[mavros_node-1] [INFO] [1788939097.099516396] [mavros.mavros]: Plugin mocap_pose_estimate initialized
+[mavros_node-1] [INFO] [1788939097.120688246] [mavros.mavros]: Plugin mount_control created
+[mavros_node-1] [INFO] [1788939097.120875102] [mavros.mavros]: Plugin mount_control initialized
+[mavros_node-1] [INFO] [1788939097.138848726] [mavros.mavros]: Plugin nav_controller_output created
+[mavros_node-1] [INFO] [1788939097.138983932] [mavros.mavros]: Plugin nav_controller_output initialized
+[mavros_node-1] [INFO] [1788939097.157401000] [mavros.mavros]: Plugin obstacle_distance created
+[mavros_node-1] [INFO] [1788939097.157530670] [mavros.mavros]: Plugin obstacle_distance initialized
+[mavros_node-1] [INFO] [1788939097.176444752] [mavros.mavros]: Plugin obstacle_distance_3d created
+[mavros_node-1] [INFO] [1788939097.176553045] [mavros.mavros]: Plugin obstacle_distance_3d initialized
+[mavros_node-1] [INFO] [1788939097.196730354] [mavros.mavros]: Plugin odometry created
+[mavros_node-1] [INFO] [1788939097.196865304] [mavros.mavros]: Plugin odometry initialized
+[mavros_node-1] [INFO] [1788939097.217127256] [mavros.mavros]: Plugin onboard_computer_status created
+[mavros_node-1] [INFO] [1788939097.217242526] [mavros.mavros]: Plugin onboard_computer_status initialized
+[mavros_node-1] [INFO] [1788939097.241038624] [mavros.mavros]: Plugin open_drone_id created
+[mavros_node-1] [INFO] [1788939097.241243145] [mavros.mavros]: Plugin open_drone_id initialized
+[mavros_node-1] [INFO] [1788939097.264408399] [mavros.mavros]: Plugin optical_flow created
+[mavros_node-1] [INFO] [1788939097.264545237] [mavros.mavros]: Plugin optical_flow initialized
+[mavros_node-1] [INFO] [1788939097.287117503] [mavros.mavros]: Plugin param created
+[mavros_node-1] [INFO] [1788939097.287253445] [mavros.mavros]: Plugin param initialized
+[mavros_node-1] [INFO] [1788939097.307955866] [mavros.mavros]: Plugin play_tune created
+[mavros_node-1] [INFO] [1788939097.308072255] [mavros.mavros]: Plugin play_tune initialized
+[mavros_node-1] [INFO] [1788939097.308105921] [mavros.mavros]: Plugin px4flow ignored
+[mavros_node-1] [INFO] [1788939097.334466200] [mavros.mavros]: Plugin rallypoint created
+[mavros_node-1] [INFO] [1788939097.334792615] [mavros.mavros]: Plugin rallypoint initialized
+[mavros_node-1] [INFO] [1788939097.357235756] [mavros.mavros]: Plugin rangefinder created
+[mavros_node-1] [INFO] [1788939097.357413780] [mavros.mavros]: Plugin rangefinder initialized
+[mavros_node-1] [INFO] [1788939097.383229811] [mavros.mavros]: Plugin rc_io created
+[mavros_node-1] [INFO] [1788939097.383375385] [mavros.mavros]: Plugin rc_io initialized
+[mavros_node-1] [INFO] [1788939097.407074071] [mavros.mavros]: Plugin setpoint_accel created
+[mavros_node-1] [INFO] [1788939097.407193565] [mavros.mavros]: Plugin setpoint_accel initialized
+[mavros_node-1] [INFO] [1788939097.433271143] [mavros.mavros]: Plugin setpoint_attitude created
+[mavros_node-1] [INFO] [1788939097.433438191] [mavros.mavros]: Plugin setpoint_attitude initialized
+[mavros_node-1] [INFO] [1788939097.461874246] [mavros.mavros]: Plugin setpoint_position created
+[mavros_node-1] [INFO] [1788939097.462001068] [mavros.mavros]: Plugin setpoint_position initialized
+[mavros_node-1] [INFO] [1788939097.493191489] [mavros.mavros]: Plugin setpoint_raw created
+[mavros_node-1] [INFO] [1788939097.493390986] [mavros.mavros]: Plugin setpoint_raw initialized
+[mavros_node-1] [INFO] [1788939097.524227247] [mavros.mavros]: Plugin setpoint_trajectory created
+[mavros_node-1] [INFO] [1788939097.524347572] [mavros.mavros]: Plugin setpoint_trajectory initialized
+[mavros_node-1] [INFO] [1788939097.551985095] [mavros.mavros]: Plugin setpoint_velocity created
+[mavros_node-1] [INFO] [1788939097.552113356] [mavros.mavros]: Plugin setpoint_velocity initialized
+[mavros_node-1] [INFO] [1788939097.583529516] [mavros.mavros]: Plugin sim_state created
+[mavros_node-1] [INFO] [1788939097.583672626] [mavros.mavros]: Plugin sim_state initialized
+[mavros_node-1] [INFO] [1788939097.629858743] [mavros.mavros]: Plugin sys_status created
+[mavros_node-1] [INFO] [1788939097.630105026] [mavros.mavros]: Plugin sys_status initialized
+[mavros_node-1] [INFO] [1788939097.658875880] [mavros.time]: TM: Timesync mode: MAVLINK
+[mavros_node-1] [INFO] [1788939097.666987068] [mavros.mavros]: Plugin sys_time created
+[mavros_node-1] [INFO] [1788939097.667112769] [mavros.mavros]: Plugin sys_time initialized
+[mavros_node-1] [INFO] [1788939097.702257196] [mavros.mavros]: Plugin tdr_radio created
+[mavros_node-1] [INFO] [1788939097.702481046] [mavros.mavros]: Plugin tdr_radio initialized
+[mavros_node-1] [INFO] [1788939097.737307698] [mavros.mavros]: Plugin terrain created
+[mavros_node-1] [INFO] [1788939097.737454232] [mavros.mavros]: Plugin terrain initialized
+[mavros_node-1] [INFO] [1788939097.774700963] [mavros.mavros]: Plugin trajectory created
+[mavros_node-1] [INFO] [1788939097.775220955] [mavros.mavros]: Plugin trajectory initialized
+[mavros_node-1] [INFO] [1788939097.834566362] [mavros.mavros]: Plugin tunnel created
+[mavros_node-1] [INFO] [1788939097.834717857] [mavros.mavros]: Plugin tunnel initialized
+[mavros_node-1] [INFO] [1788939097.868529646] [mavros.mavros]: Plugin vfr_hud created
+[mavros_node-1] [INFO] [1788939097.868695701] [mavros.mavros]: Plugin vfr_hud initialized
+[mavros_node-1] [INFO] [1788939097.868734007] [mavros.mavros]: Plugin vibration ignored
+[mavros_node-1] [INFO] [1788939097.907655598] [mavros.mavros]: Plugin vision_pose created
+[mavros_node-1] [INFO] [1788939097.907852567] [mavros.mavros]: Plugin vision_pose initialized
+[mavros_node-1] [INFO] [1788939097.946574566] [mavros.mavros]: Plugin vision_speed created
+[mavros_node-1] [INFO] [1788939097.946803472] [mavros.mavros]: Plugin vision_speed initialized
+[mavros_node-1] [INFO] [1788939097.967393887] [mavros.mavros_router]: link[1001] detected remote address 255.190
+[mavros_node-1] [INFO] [1788939097.994915532] [mavros.mavros]: Plugin waypoint created
+[mavros_node-1] [INFO] [1788939097.995110165] [mavros.mavros]: Plugin waypoint initialized
+[mavros_node-1] [INFO] [1788939097.995155383] [mavros.mavros]: Plugin wheel_odometry ignored
+[mavros_node-1] [INFO] [1788939098.031123826] [mavros.mavros]: Plugin wind_estimation created
+[mavros_node-1] [INFO] [1788939098.031535748] [mavros.mavros]: Plugin wind_estimation initialized
+[mavros_node-1] [INFO] [1788939098.035061443] [mavros.mavros]: Built-in SIMD instructions: ARM NEON
+[mavros_node-1] [INFO] [1788939098.035134534] [mavros.mavros]: Built-in MAVLink package version: 2026.6.6
+[mavros_node-1] [INFO] [1788939098.035165736] [mavros.mavros]: Known MAVLink dialects: common ardupilotmega ASLUAV AVSSUAS all csAirLink cubepilot development icarous loweheiser marsh matrixpilot paparazzi standard stemstudios storm32 uAvionix ualberta
+[mavros_node-1] [INFO] [1788939098.035184713] [mavros.mavros]: MAVROS UAS via /uas1 started. MY ID 1.191, TARGET ID 1.1
+[mavros_node-1] [INFO] [1788939098.061206140] [mavros.mavros_router]: link[1002] detected remote address 1.191
+[mavros_node-1] [INFO] [1788939098.078837398] [mavros.rc]: RC_CHANNELS message detected!
+[mavros_node-1] [INFO] [1788939098.079517460] [mavros.imu]: IMU: Raw IMU message used.
+[mavros_node-1] [WARN] [1788939098.079627545] [mavros.imu]: IMU: linear acceleration on RAW_IMU known on APM only.
+[mavros_node-1] [WARN] [1788939098.079672635] [mavros.imu]: IMU: ~imu/data_raw stores unscaled raw acceleration report.
+[mavros_node-1] [WARN] [1788939098.643819148] [mavros.cmd]: CMD: Unexpected command 520, result 0
+[mavros_node-1] [INFO] [1788939098.644241279] [mavros.geofence]: GF: Using MISSION_ITEM_INT
+[mavros_node-1] [INFO] [1788939098.644350500] [mavros.rallypoint]: RP: Using MISSION_ITEM_INT
+[mavros_node-1] [INFO] [1788939098.644407142] [mavros.mission]: WP: Using MISSION_ITEM_INT
+[mavros_node-1] [INFO] [1788939098.644458537] [mavros.sys]: VER: 1.1: Capabilities         0x000000000000fbef
+[mavros_node-1] [INFO] [1788939098.644514859] [mavros.sys]: VER: 1.1: Flight software:     040701ff (3631323937656264)
+[mavros_node-1] [INFO] [1788939098.644552973] [mavros.sys]: VER: 1.1: Middleware software: 00000000 (0000000000000000)
+[mavros_node-1] [INFO] [1788939098.644620368] [mavros.sys]: VER: 1.1: OS software:         00000000 (6633383933303164)
+[mavros_node-1] [INFO] [1788939098.644654802] [mavros.sys]: VER: 1.1: Board hardware:      1b590000
+[mavros_node-1] [INFO] [1788939098.644678707] [mavros.sys]: VER: 1.1: VID/PID:             1209:5740
+[mavros_node-1] [INFO] [1788939098.644700404] [mavros.sys]: VER: 1.1: UID:                 0000000000000000
+[mavros_node-1] [INFO] [1788939098.673507652] [mavros.mavros]: CON: Got HEARTBEAT, connected. FCU: ArduPilot
+[mavros_node-1] [INFO] [1788939098.673874933] [mavros.mission]: WP: detected enable_partial_push: 1
+[mavros_node-1] [INFO] [1788939098.676665298] [mavros.rc]: RC_CHANNELS message detected!
+[mavros_node-1] [INFO] [1788939098.677009922] [mavros.imu]: IMU: Raw IMU message used.
+[mavros_node-1] [INFO] [1788939099.685667870] [mavros.sys]: VER: 1.1: Capabilities         0x000000000000fbef
+[mavros_node-1] [INFO] [1788939099.685815205] [mavros.sys]: VER: 1.1: Flight software:     040701ff (dbe79216)
+[mavros_node-1] [INFO] [1788939099.685863303] [mavros.sys]: VER: 1.1: Middleware software: 00000000 (        )
+[mavros_node-1] [INFO] [1788939099.685896744] [mavros.sys]: VER: 1.1: OS software:         00000000 (d103983f	@Wf)
+[mavros_node-1] [INFO] [1788939099.685921769] [mavros.sys]: VER: 1.1: Board hardware:      1b590000
+[mavros_node-1] [INFO] [1788939099.685942794] [mavros.sys]: VER: 1.1: VID/PID:             1209:5740
+[mavros_node-1] [INFO] [1788939099.685962059] [mavros.sys]: VER: 1.1: UID:                 0000000000000000
+[mavros_node-1] [INFO] [1788939108.674988539] [mavros.home_position]: HP: requesting home position
+[mavros_node-1] [INFO] [1788939108.681004701] [mavros.sys]: FCU: ArduCopter V4.7.1 (dbe79216)
+[mavros_node-1] [INFO] [1788939108.681361579] [mavros.sys]: FCU: ChibiOS: d103983f
+[mavros_node-1] [INFO] [1788939108.681705592] [mavros.sys]: FCU: CUAV-V6X-v2 0031002A 35325103 30373630
+[mavros_node-1] [INFO] [1788939108.682016067] [mavros.sys]: FCU: IOMCU: 410 2003 411FC231
+[mavros_node-1] [INFO] [1788939108.682319151] [mavros.sys]: FCU: RCOut: PWM:1-16
+[mavros_node-1] [INFO] [1788939108.682624314] [mavros.sys]: FCU: IMU0: fast hi-res sampling 2.0kHz/2.0kHz
+[mavros_node-1] [INFO] [1788939108.682917861] [mavros.sys]: FCU: IMU2: fast hi-res sampling 1.6kHz/3.2kHz
+[mavros_node-1] [INFO] [1788939108.683210224] [mavros.sys]: FCU: Frame: QUAD/X
+[mavros_node-1] [ERROR] [1788939110.244194202] [mavros.sys]: FCU: PreArm: 3D Accel calibration needed
+[mavros_node-1] [ERROR] [1788939110.244670411] [mavros.sys]: FCU: PreArm: Compass not calibrated
+[mavros_node-1] [ERROR] [1788939110.244983254] [mavros.sys]: FCU: PreArm: AHRS: waiting for home
+[mavros_node-1] [ERROR] [1788939110.245245984] [mavros.sys]: FCU: PreArm: Battery 1 below minimum arming voltage
+[mavros_node-1] [ERROR] [1788939110.245500713] [mavros.sys]: FCU: PreArm: Radio failsafe on
+[mavros_node-1] [INFO] [1788939113.683252344] [mavros.mission]: WP: mission received
+[mavros_node-1] [WARN] [1788939113.986187062] [mavros.param]: PR: Param STAT_RUNTIME (65535/1071): 36485 different index: 973/1071
+[mavros_node-1] [INFO] [1788939114.686575986] [mavros.param]: PR: parameters list received
+[mavros_node-1] [INFO] [1788939118.683350145] [mavros.rallypoint]: RP: mission received
+[mavros_node-1] [INFO] [1788939123.680468220] [mavros.geofence]: GF: mission received
+[mavros_node-1] [ERROR] [1788939136.333072203] [mavros.sys]: FCU: Arm: Need Position Estimate
+[mavros_node-1] [ERROR] [1788939141.114222597] [mavros.sys]: FCU: PreArm: Need Position Estimate
+[mavros_node-1] [ERROR] [1788939172.113612181] [mavros.sys]: FCU: PreArm: 3D Accel calibration needed
+[mavros_node-1] [ERROR] [1788939172.114335036] [mavros.sys]: FCU: PreArm: Compass not calibrated
+[mavros_node-1] [ERROR] [1788939172.114688096] [mavros.sys]: FCU: PreArm: AHRS: waiting for home
+[mavros_node-1] [ERROR] [1788939172.114886050] [mavros.sys]: FCU: PreArm: Battery 1 below minimum arming voltage
+[mavros_node-1] [ERROR] [1788939172.115069091] [mavros.sys]: FCU: PreArm: Radio failsafe on

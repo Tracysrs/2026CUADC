@@ -1,0 +1,56 @@
+header:
+  stamp:
+    sec: 1788939136
+    nanosec: 333255695
+  frame_id: ''
+severity: 2
+text: 'Arm: Need Position Estimate'
+---
+header:
+  stamp:
+    sec: 1788939141
+    nanosec: 114454858
+  frame_id: ''
+severity: 2
+text: 'PreArm: Need Position Estimate'
+---
+header:
+  stamp:
+    sec: 1788939172
+    nanosec: 113883927
+  frame_id: ''
+severity: 2
+text: 'PreArm: 3D Accel calibration needed'
+---
+header:
+  stamp:
+    sec: 1788939172
+    nanosec: 114513950
+  frame_id: ''
+severity: 2
+text: 'PreArm: Compass not calibrated'
+---
+header:
+  stamp:
+    sec: 1788939172
+    nanosec: 114768640
+  frame_id: ''
+severity: 2
+text: 'PreArm: AHRS: waiting for home'
+---
+header:
+  stamp:
+    sec: 1788939172
+    nanosec: 114953890
+  frame_id: ''
+severity: 2
+text: 'PreArm: Battery 1 below minimum arming voltage'
+---
+header:
+  stamp:
+    sec: 1788939172
+    nanosec: 115138436
+  frame_id: ''
+severity: 2
+text: 'PreArm: Radio failsafe on'
+---

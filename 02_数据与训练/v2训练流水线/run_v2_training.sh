@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # CUADC 2026 危化标识检测 · v2 实拍数据混合微调（AutoDL 云 GPU 一键脚本）
-# 对应任务书：PC端训练任务书.md §6（验收线：逐类 mAP50>=0.90，白底三类>=0.85，漏检率<5%）
+#
+# ⚠️ 2026-09-12 状态：本脚本链路【停用】——上游 v1 合成集与 real_data 标签均为
+# 旧 GHS 类别表（id 2~5 与附件11 实表错位，见 01_视觉模块 §2.1）。
+# 现行路线 = yolov8n COCO 预训练直训（deliver_v2 已验证，见 SSOT §8.2）。
+# 数据重映射后如需复活微调链，本脚本可继续使用（验收判读已改逐类无豁免）。
+#
+# 对应任务书：PC端训练任务书.md §6（验收线：逐类 mAP50>=0.90 无豁免，漏检率<5%）
 # 用法：把 real_data.zip 和本文件上传到 /root/autodl-tmp/ 后执行：
 #   cd /root/autodl-tmp && bash run_v2_training.sh
 #
@@ -72,7 +78,7 @@ echo "微调起点：$V1_BEST"
 echo "===== [5/7] 开始 v2 微调（任务书 §6 参数铁律，约 15~40 分钟） ====="
 # lr0=0.001      微调在预训练权重上学习率降 10 倍
 # flipud=0.5     俯视图上下翻转是白赚的增强
-# hsv_h=0.005    色相就是类别特征（红=易燃液体 橙=爆炸品），必须低于默认 0.015
+# hsv_h=0.005    色相就是类别特征（红=易燃 橙=爆炸品），必须低于默认 0.015
 # close_mosaic=10 最后 10 轮关 mosaic 贴合真实分布
 yolo detect train \
   model=${V1_BEST} \
@@ -90,8 +96,9 @@ yolo val model=${BEST} data=${BASE}/real_data/data.yaml \
 tail -20 ${BASE}/deliver/val_report.txt
 
 python - <<'PY'
-# 逐类验收自动判读：mAP50 白底三类>=0.85、其余>=0.90；召回<0.95 提示漏检超标
-white_bg = {"腐蚀品", "感染性物品", "有毒品"}
+# 逐类验收自动判读：mAP50 逐类 >=0.90 无豁免（09-12 勘正，取消旧"白底三类>=0.85"豁免）；
+# 召回<0.95 提示漏检超标
+white_bg = set()  # 保留变量位：旧表豁免集合已随类别表勘正取消
 report = open('/root/autodl-tmp/deliver/val_report.txt', encoding='utf-8', errors='ignore').read()
 rows = []
 for line in report.splitlines():
@@ -137,7 +144,7 @@ cat > ${BASE}/deliver/dataset_version.md <<'EOF'
 - 规模：414 张（train 376 含 25 张背景图 / val 38），实例约 2376
 - 切分：按视频片段整段切（frame_* 取中段连续帧、1_* 取末段、101 个单帧片段随机 10%），避免连续帧泄题
 - 类别：0~9 十个标识类 + 10 barrel（本批无 barrel 实例，保留类目以对齐 v1 检测头）
-- 验收线：逐类 mAP50 >= 0.90（白底三类 腐蚀品/感染性物品/有毒品 >= 0.85），漏检率 < 5%
+- 验收线：逐类 mAP50 >= 0.90（逐类无豁免），漏检率 < 5%
 EOF
 cd ${BASE} && zip -qr deliver_v2.zip deliver
 echo "=========================================="

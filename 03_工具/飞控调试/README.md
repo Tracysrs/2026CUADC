@@ -6,14 +6,17 @@
 |---|---|
 | `check_fc.py` | 连飞控读版本 / 模式 / 电池 / GPS / 姿态 |
 | `check_gps.py` | GPS 定位 / 卫星数 / 罗盘检测（室外验收：3D Fix + ≥8 星 + HDOP<1.5） |
+| `check_radio.py` | 地面数传诊断（默认 COM10）：链路活性（MAVLink 帧计数）+ AT 命令模式进入 + ATI 系列身份转储，只读不改参。**只发 `+++\r`**（远航 X6 = X-Rock 4.0 固件，裸 `+++` 无效）；**严禁 ATI5**（挂死 X-Rock 固件，只能重插 USB 恢复）。链路活跃时 AT 进不去（心跳流打断静默窗口），读/配电台先给机载端断电。MP 1.3.83 电台页对此电台必崩"端口被关闭"，配置走脚本核身 + 3DR Radio Config（见 2026-09-12 日志） |
 | `verify_params.py` | `--export` 全参数备份；`--diff 参数文件` 与文件逐项比对（配置一致性检查） |
 | `activate_lazy_params.py` | 激活懒加载参数组并重启（参数名探查用） |
 | `read_params.py` | 读取机架 / 关键串口等指定参数（默认 COM5） |
-| `motor_test.py` | 电机顺序/方向测试（拆桨用）。按输出口 M1~M4 逐个转 1 秒：`python motor_test.py [COM口] [输出列表]`，如 `python motor_test.py COM5 3` 只转 M3。内部已做输出口→测试序列号换算（见 2026-09-09 日志的坑） |
+| `motor_test.py` | 电机顺序/方向测试（拆桨用）。**严格按输出口 M1→M2→M3→M4** 逐个发 1 秒信号：`python motor_test.py [COM口] [输出列表]`，如 `python motor_test.py COM5 3` 只转 M3。跑前三道核验（机架→测试序换算表 / SERVO1~4_FUNCTION=Motor1~4 绑定 / 代解硬件安全开关）+ 3 秒倒计时，任一不过拒绝测试（见 2026-09-09 日志 §三/§五、2026-09-11 日志） |
 | `fc_dryrun.sh` | **在 Jetson 上跑**：真飞控 USB 链路一键验证 + 任务状态机干跑（无桨不解锁）。`bash fc_dryrun.sh [秒数]`，日志落 `/tmp/cuadc_fc_dryrun_*/`。首次实跑见 2026-09-09 日志 §八 |
 | `fc_log_pull.py` | **在 Jetson 上跑**：mavftp 拉飞控 SD 卡 dataflash 日志，`list` 列目录 / `get 名字` 拉取。注意 `cmd_get` 异步，正式拉取用 `python3 -m pymavlink.mavftp --device /dev/cuadc-fc --burst_read_size 239 get /APM/Logs/x.BIN 本地路径`（见 2026-09-09 日志 §八） |
 | `fc_armrun.sh` | **在 Jetson 上跑**：解锁试跑·状态机路径。临时放宽 ARMING_SKIPCHK/FS_THR_ENABLE（trap 兜底恢复+回读校验），任务状态机自动解锁尝试。无 GPS 时会卡 WAIT_NAV_STABLE（见 2026-09-09 日志 §九） |
 | `fc_armtest.sh` | **在 Jetson 上跑**：解锁试跑·直接路径。绕过状态机直接 CommandBool 解锁 10s → 上锁。无 GPS 时被固件强制位置检查拒绝（`Arm: Need Position Estimate`），参数同样临时改+自动恢复 |
+| `fc_servo_test.sh` | **在 Jetson 上跑**：舵机投放时序（DO_SET_SERVO，收拢 1100/释放 1900 与任务逻辑同源），自动解会话安全锁 + SERVOx_FUNCTION 检查。`SERVO_NUM=10` 测 A2。舵机不动的根因排查见 2026-09-09 日志 §舵机排障（系统无 5V 源） |
+| `fc_servo_diag.sh` | **在 Jetson 上跑**：舵机不动时的诊断——解会话安全锁 + 抓 `/mavros/rc/out` 看飞控输出通道是否真在变值（区分"指令没到"与"舵机没电"） |
 
 ## 使用注意
 

@@ -12,7 +12,7 @@
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
 # 注意：导入前先在原机上"保存参数到文件"做备份（已有 param_backup_*.param 可用）
-# 串口映射（ArduPilot）：SERIAL0=USB  SERIAL1=TELEM1  SERIAL2=TELEM2
+# 串口映射（ArduPilot）：SERIAL0=USB  SERIAL1=TELEM1  SERIAL2=TELEM2  SERIAL4=GPS2  SERIAL5=TELEM3  SERIAL6=UART4
 
 # ---------- 0. 机架（新固件默认 FRAME_CLASS=0 未定义，必须显式设置） ----------
 FRAME_CLASS,1
@@ -21,11 +21,23 @@ FRAME_TYPE,1
 # ---------- 0b. 电调输出（好盈 XRotor 40A，OPTO 无 BEC） ----------
 # 输出刷新率：默认 490Hz 超出电调规格（50~450Hz），2026-09-09 真机已改 200
 RC_SPEED,200
+# 电机怠速三件套（⚠️ 必须成组，MOT_SPIN_ARM < MOT_SPIN_MIN 否则 PreArm
+# "Motors: MOT_SPIN_ARM > MOT_SPIN_MIN" 拒绝解锁——2026-09-12 实机踩坑：
+# 飞控上 MOT_SPIN_MIN 被改为 0.03 的孤儿值，解锁被拒；修复后验证解锁通过）
+MOT_SPIN_MIN,0.15
+MOT_SPIN_ARM,0.13
+MOT_SPIN_MAX,0.95
+MOT_THST_EXPO,0.65
 
-# ---------- 1. 链路：TELEM1 -> 数传电台（地面站） ----------
+# ---------- 1. 链路：TELEM1 -> 数传电台（地面站）【2026-09-11 端到端验收通过】 ----------
+# （当日曾因随附线不配 TELEM1 座改走 UART4，后找到适配线改回，UART4 还原备用）
 # MAVLink2 + 57600，与 SiK 数传出厂波特率一致
 SERIAL1_PROTOCOL,2
 SERIAL1_BAUD,57
+# UART4(SERIAL6) 还原禁用备用（插新设备前先改参数）
+SERIAL6_PROTOCOL,-1
+SERIAL6_BAUD,57
+SERIAL6_OPTIONS,0
 
 # ---------- 2. 链路：TELEM2 -> Orin Nano（机载计算机） ----------
 # MAVLink2 + 921600；线缆只有 TX/RX/GND 时必须关流控，否则完全不通
@@ -50,8 +62,8 @@ FS_THR_ENABLE,5
 # 比赛上场 FS_THR_ENABLE 改 0（见 §3），CH6 急停拨杆即细则 5.8 的"紧急停止"
 # ⚠️ 遥控器端 failsafe 必须设 No pulses（RX SETUP → FAILSAFE；出厂"保持"会掩盖断链）
 RC6_OPTION,31
-# ⚠️ 上行急停通道配置【真机尚未写入】：下次连机写入并回读；写入后 CH6 拨高位电机
-# 停转锁死，复位需拨回低位并重新解锁。写入前先在遥控器端确认 SWC 已分配给 CH6
+# 2026-09-11 已随基线导入并回读验证（两遍+重启+diff 全一致）；剩余动作只有遥控器端：
+# SWC 拨杆分配到 CH6 + iA6B failsafe 改 No pulses
 
 # ---------- 4. 运动限制（新固件参数名，单位 m/s；旧 WPNAV_*/GUIDS_* 命名已废除） ----------
 # 自动/GUIDED 巡航 4 m/s；上升 3 m/s；下降 1.5 m/s（旧名 WPNAV_SPEED,400 等）

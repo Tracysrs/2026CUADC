@@ -10,6 +10,7 @@
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>cuadc_interfaces</depend>
 
   <exec_depend>ros2launch</exec_depend>
 

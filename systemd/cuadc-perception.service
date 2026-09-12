@@ -1,0 +1,17 @@
+# CUADC 感知自启（P0.3）：开机加载 TRT engine + 黑帧预热后待命
+# 安装：sudo cp cuadc-perception.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#       sudo systemctl enable --now cuadc-perception
+# 查看：journalctl -u cuadc-perception -f   （启动行有引擎加载/预热耗时）
+[Unit]
+Description=CUADC hazard recon perception (TRT engine warm at boot)
+After=multi-user.target
+
+[Service]
+User=nvidia
+Type=simple
+ExecStart=/home/nvidia/cuadc_start_perception.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -13,3 +13,7 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+build_test/
+# Windows 测试编译产物
+test_*.exe
+*.pdb

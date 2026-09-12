@@ -5,7 +5,7 @@
     ros2 run cuadc_perception check_vision_contract --ros-args \
         -p duration_s:=10.0 -p min_rate_hz:=15.0
 逐项打印 PASS/FAIL，全部通过退出码 0，任一失败退出码 1（可接 CI/上机前检查）。
-校验项与《接口契约.md》§5 一一对应；契约升级时必须同步改本脚本。
+校验项与《接口契约.md》§6 一一对应；契约升级时必须同步改本脚本。
 """
 
 import math

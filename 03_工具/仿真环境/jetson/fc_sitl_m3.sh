@@ -49,8 +49,13 @@ done
 echo "  done"
 
 echo "[4] 启动虚拟判定节点 + 场景真值感知替身（真值来自 generated_scene.yaml，带看门狗重启）"
+# 判定节点桶真值随 randomize_scene.py 布景联动（无此文件=旧默认桶位）
+JP=""
+[ -f "$HOME/sim_scripts/judge_truth_params.yaml" ] && \
+  JP="--ros-args --params-file $HOME/sim_scripts/judge_truth_params.yaml"
+echo "  judge 桶真值: ${JP:+judge_truth_params.yaml（随机布景）}${JP:-默认（旧固定桶位）}"
 ( for i in 1 2 3 4 5 6 7 8 9 10; do
-    ros2 run cuadc_rescue_sim virtual_drop_judge_node >> "$LOG/judge.log" 2>&1
+    ros2 run cuadc_rescue_sim virtual_drop_judge_node $JP >> "$LOG/judge.log" 2>&1
     echo "[watchdog] judge 退出(第${i}次), 1s 后重启" >> "$LOG/judge.log"
     sleep 1
   done ) &
@@ -113,3 +118,60 @@ grep -aE "STATE ->|任务|失败|ABORT|目标集冻结|瞄准点冻结|释放门
   "$LOG/mission.log" 2>/dev/null | tail -30
 echo "--- mission.log 尾部:"
 tail -8 "$LOG/mission.log" 2>/dev/null
+
+echo ""
+echo "========== 完成事项 =========="
+python3 - "$LOG/mission.log" "$LOG/judge.log" << 'PYEOF'
+import re, sys
+
+mission = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+try:
+    judge = open(sys.argv[2], encoding='utf-8', errors='replace').read()
+except OSError:
+    judge = ''
+
+states = re.findall(r'\[(?:INFO|ERROR)\] \[(\d+)\.\d+\] \[cuadc_mission\]: STATE -> (\w+)', mission)
+first = {}
+for ts, st in states:
+    first.setdefault(st, int(ts))
+t0 = first.get('WAIT_NAV_STABLE')
+done = first.get('DONE')
+
+items, total = [], None
+if t0 and done:
+    total = done - t0
+    def dur(a, b):
+        if a in first and b in first:
+            return '%.0fs' % (first[b] - first[a])
+        return '?'
+    items.append('✅ 起飞（%s）' % dur('WAIT_ARM', 'SEARCH')
+                 if 'SEARCH' in first else '✅ 起飞')
+lock = re.search(r'目标集冻结\((\w+), (\d+) 筒\)', mission)
+if lock:
+    items.append('✅ 搜索锁定（%s 筒, %s，搜索段 %s）'
+                 % (lock.group(2), lock.group(1), dur('SEARCH', 'ALIGN')))
+rel = re.findall(
+    r'success=(\d) release=(\d) target=(\S+).*?error=([\d.]+) zone=(\w+) score=(\d+)',
+    mission)
+for _s, n, tgt, err, zone, sc in rel:
+    mark = '✅' if zone == 'A' else ('⚠️' if zone == 'B' else '❌')
+    items.append('%s 投放#%s → %s（误差 %.1fcm，%s 区 %s 分）'
+                 % (mark, n, tgt, float(err) * 100, zone, sc))
+photos = re.search(r'任务结束: 投放 (\d)/2, 拍照确认数=(\d+)', mission)
+if photos:
+    items.append('📸 侦察拍照确认 %s/6' % photos.group(2))
+if 'DISARM' in first or 'DONE' in first:
+    items.append('✅ 返航降落上锁')
+score = re.findall(r'累计=(\d+)', judge)
+if 'PILOT_OVERRIDE' in first:
+    items.append('⚠️ 飞手接管退出')
+reason = re.search(r'失败原因: (.+)$', mission, re.M)
+if reason:
+    items.append('❌ 未完成: ' + reason.group(1))
+
+print(' | '.join(items) if items else '任务未产生有效记录')
+if total is not None:
+    print('总时长: %.0f s（验收线 180s / 硬上限 240s）' % total)
+if score:
+    print('投放判分累计: %s 分（conservative 序满分 400=100+300；aggressive 序冲 800=500+300）' % score[-1])
+PYEOF

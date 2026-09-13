@@ -51,7 +51,8 @@ if last_gps:
     ft = last_gps.fix_type
     print(f"  定位: {FIX[ft] if ft < len(FIX) else ft} | 卫星: {last_gps.satellites_visible} | HDOP: {last_gps.eph/100:.2f}")
     print(f"  纬度: {last_gps.lat/1e7:.7f} 经度: {last_gps.lon/1e7:.7f} 海拔: {last_gps.alt/1000:.1f}m")
-    print(f"  VDOP: {last_gps.v/100 if hasattr(last_gps,'v') else last_gps.vdop/100:.2f} | 速度: {last_gps.vel/100:.2f}m/s")
+    vdop = getattr(last_gps, "vdop", None) or getattr(last_gps, "epv", 0)
+    print(f"  VDOP: {vdop/100:.2f} | 速度: {last_gps.vel/100:.2f}m/s")
 else:
     print("\n--- GPS1: 无数据 ---")
 

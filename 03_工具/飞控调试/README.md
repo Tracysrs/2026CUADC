@@ -4,8 +4,12 @@
 
 | 脚本 | 用途 |
 |---|---|
+| `ops.py` | **统一入口**：`python ops.py` 打印按《现场操作清单》阶段分类的命令菜单；`python ops.py <命令> [参数]` 透传调用下表脚本（.sh 自动提示去 Jetson 跑） |
 | `check_fc.py` | 连飞控读版本 / 模式 / 电池 / GPS / 姿态 |
-| `check_gps.py` | GPS 定位 / 卫星数 / 罗盘检测（室外验收：3D Fix + ≥8 星 + HDOP<1.5） |
+| `check_gps.py` | GPS 定位 / 卫星数 / 罗盘检测（室外验收：3D Fix + ≥8 星 + HDOP<1.5）。2026-09-13 修 pymavlink 新版 VDOP 字段兼容 |
+| `prearm_diag.py` | 解锁前诊断（阶段0）：模式/RC/电池/EKF/罗盘一致性/参数门限一次汇总 + 抓 STATUSTEXT，只读不发解锁指令。2026-09-13 实战定位 "PreArm: Compasses inconsistent" |
+| `site_geo_check.py` | 场地地理数据（CONFIG 区预填自贡航空产业园：29.3765N/104.6258E/标高345m 占位）：probe 就地测试 / here 实测回填 / record N 记 GPS。严禁用高德 GCJ-02 坐标 |
+| `rtk_setup.py` | RTK rover（RTK-01-R 接 GPS2）一键配置+验证：GPS2_TYPE=3(NMEA) + **SERIAL4_BAUD=921**（本版 4.7 无 GPS2_BAUD 参数，见 11_设备参数/RTK-01.md §6） |
 | `check_radio.py` | 地面数传诊断（默认 COM10）：链路活性（MAVLink 帧计数）+ AT 命令模式进入 + ATI 系列身份转储，只读不改参。**只发 `+++\r`**（远航 X6 = X-Rock 4.0 固件，裸 `+++` 无效）；**严禁 ATI5**（挂死 X-Rock 固件，只能重插 USB 恢复）。链路活跃时 AT 进不去（心跳流打断静默窗口），读/配电台先给机载端断电。MP 1.3.83 电台页对此电台必崩"端口被关闭"，配置走脚本核身 + 3DR Radio Config（见 2026-09-12 日志） |
 | `verify_params.py` | `--export` 全参数备份；`--diff 参数文件` 与文件逐项比对（配置一致性检查） |
 | `activate_lazy_params.py` | 激活懒加载参数组并重启（参数名探查用） |

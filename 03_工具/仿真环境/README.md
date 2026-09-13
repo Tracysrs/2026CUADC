@@ -42,6 +42,9 @@ CUADC"多旋翼侦察与救援"赛项的仿真场地。从 `08_参考/hgd_cudac/
 
 ## Jetson SITL（✅ 已打通，2026-09-10 仿真飞行 FLIGHT_OK）
 
+> **日常操作看 [jetson/操作手册.md](jetson/操作手册.md)**（六步标准流程 / 三种任务
+> 模式 / 判分验收线 / 排障速查表 / IP 变更处理），本节只留架构与历史。
+
 Jetson 侧脚本在 `jetson/` 子目录（Jetson 上同步放于 `~/sim_scripts/`）：
 
 - `start_sitl.sh`：sim_vehicle（gazebo-iris JSON 帧，MAVProxy 出口 UDP 14550）

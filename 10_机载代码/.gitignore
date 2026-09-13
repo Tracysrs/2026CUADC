@@ -1,0 +1,19 @@
+# 构建产物
+build/
+install/
+log/
+latest_build/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# 编辑器/系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+build_test/
+# Windows 测试编译产物
+test_*.exe
+*.pdb

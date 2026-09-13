@@ -1,0 +1,4 @@
+# 统一换行符：仓库内一律 LF， checkout 不做平台转换（代码要上 Linux/Jetson）
+* text=auto eol=lf
+*.png binary
+*.jpg binary

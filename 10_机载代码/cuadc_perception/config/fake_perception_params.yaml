@@ -1,0 +1,17 @@
+# 假感知节点参数（默认值 = 接口契约 v1.0 演示配置）
+# 顶层键 = 节点名（launch 里 name: fake_perception）
+fake_perception:
+  ros__parameters:
+    frame_rate_hz: 30.0            # 检测频率（验收线 ≥25，SSOT §4.1）
+    pipeline_delay_s: 0.0          # 人工注入的取帧→发布延迟；P0.4 验收设 0.2
+    noise_std_m: 0.01              # 模拟检测抖动（米）
+    contract_version: 1.0          # 契约版本哨兵（orientation.z）
+    frame_id: cuadc_body_flu       # 帧哨兵
+    bucket_topic: /perception/drop_buckets_body
+    heartbeat_topic: /perception/heartbeat
+    # 模拟三个筒（机体系 x 前 y 左 z 上；z 为负 = 目标在飞机下方）
+    bucket_positions_x: [1.5, 1.8, 2.2]
+    bucket_positions_y: [0.5, -0.6, 0.1]
+    bucket_positions_z: [-1.8, -1.8, -1.8]
+    bucket_diameters: [0.25, 0.20, 0.15]      # 对号 25/20/15cm 筒
+    bucket_confidences: [0.90, 0.85, 0.80]

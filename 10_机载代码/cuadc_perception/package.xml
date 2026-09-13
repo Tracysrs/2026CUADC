@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cuadc_perception</name>
+  <version>0.1.0</version>
+  <description>CUADC 2026 · 感知包骨架：假感知节点（契约演示/联调用）+ 契约校验器。真感知（YOLOv8n-seg + 单目解算）按 M2 在本包内实现，接口见 10_机载代码/接口契约.md</description>
+  <maintainer email="cuadc-team@users.noreply.github.com">CUADC Team</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>cuadc_interfaces</depend>
+
+  <exec_depend>ros2launch</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

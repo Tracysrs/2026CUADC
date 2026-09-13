@@ -37,7 +37,7 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import PointStamped
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Header, String, UInt32
 from ultralytics import YOLO
 
@@ -51,6 +51,8 @@ class HazardReconNode(Node):
 
         # ---- 话题 ----
         self.declare_parameter('image_topic', '/camera/image_raw')
+        # True = 订阅 <image_topic>/compressed（CompressedImage JPEG），见下方订阅处说明
+        self.declare_parameter('image_compressed', False)
         # 图像订阅 QoS：默认 RELIABLE——大图经 UDP-only 传输时 best_effort 丢一个
         # 分片 = 丢整帧（09-12 实测 10Hz 只吃到 ~2.5Hz）；RELIABLE 靠重传保整帧。
         self.declare_parameter('image_qos_reliable', True)
@@ -150,8 +152,17 @@ class HazardReconNode(Node):
             img_qos = QoSProfile(depth=2, reliability=ReliabilityPolicy.RELIABLE)
         else:
             img_qos = qos_sensor
-        self.create_subscription(
-            Image, gp('image_topic').value, self.on_image, img_qos)
+        # image_compressed=True：订阅 <image_topic>/compressed（CompressedImage）。
+        # 6MB 裸图在 UDP-only 回环下不可用（09-13 实测：发布端单帧 ~1s，全链 1Hz）；
+        # JPEG 压缩图 ~50KB/帧，全链 25fps+。生产启用时同步在 config 打开此开关。
+        self.image_compressed = bool(gp('image_compressed').value)
+        if self.image_compressed:
+            self.create_subscription(
+                CompressedImage, gp('image_topic').value + '/compressed',
+                self.on_image, img_qos)
+        else:
+            self.create_subscription(
+                Image, gp('image_topic').value, self.on_image, img_qos)
         self.create_subscription(
             PointStamped, gp('request_topic').value, self.on_request, 10)
         self.create_subscription(
@@ -243,7 +254,11 @@ class HazardReconNode(Node):
     def on_image(self, msg):
         try:
             t0 = time.time()
-            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            if self.image_compressed:
+                frame = cv2.imdecode(
+                    np.frombuffer(msg.data, np.uint8), cv2.IMREAD_COLOR)
+            else:
+                frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             self._process_frame(msg, frame)
             if self.debug_log:
                 now = time.time()

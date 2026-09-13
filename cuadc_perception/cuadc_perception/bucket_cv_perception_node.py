@@ -57,12 +57,19 @@ class BucketCvPerceptionNode(Node):
         self.declare_parameter('frame_id', 'cuadc_body_flu')
         self.declare_parameter('bucket_topic', '/perception/drop_buckets_body')
         self.declare_parameter('heartbeat_topic', '/perception/heartbeat')
-        self.declare_parameter('l_min', 160.0)            # LAB L 通道白桶阈值
+        self.declare_parameter('l_min', 160.0)            # LAB L 通道白桶阈值（兜底下限）
+        self.declare_parameter('l_offset', 10.0)          # 相对阈值：L > 帧中位数 + 偏移。
+                                                          # 2026-09-12 排障：软件渲染把光照摊平
+                                                          # （桶 L157 vs 场地 L143），固定阈值 160
+                                                          # 差 1 灰度全灭；相对阈值两种渲染都成立
         self.declare_parameter('ab_max_dev', 22.0)        # A/B 离中性最大偏差（近白）
         self.declare_parameter('min_area_px', 40.0)       # 连通域最小面积
         self.declare_parameter('min_circularity', 0.60)   # 椭圆短/长轴比下限（下视圆）
         self.declare_parameter('confidence_base', 0.55)   # 置信度下限映射
         self.declare_parameter('debug_save_period', 0)    # 每 N 张存调试图（0=关）
+        # 直径补偿：LAB 阈值+形态学腐蚀桶口边缘 → 椭圆偏小 ~15%（2026-09-12 标定
+        # 实测：真值 0.25m 悬停读数 0.21~0.23）。补偿后落在 nominal±0.035 对号门内
+        self.declare_parameter('diam_compensation', 1.15)
 
         gp = self.get_parameter
         self.delay_s = max(0.0, gp('pipeline_delay_s').value)
@@ -74,6 +81,8 @@ class BucketCvPerceptionNode(Node):
         self.min_circ = gp('min_circularity').value
         self.conf_base = gp('confidence_base').value
         self.debug_period = int(gp('debug_save_period').value)
+        self.diam_comp = max(1.0, gp('diam_compensation').value)
+        self.l_offset = max(0.0, gp('l_offset').value)
 
         # ---- ROS 侧：odom（高度+时间基准）与发布 ----
         qos = qos_profile_sensor_data
@@ -187,7 +196,9 @@ class BucketCvPerceptionNode(Node):
         lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB)
         L, A, B = lab[:, :, 0].astype(np.float32), \
             lab[:, :, 1].astype(np.float32), lab[:, :, 2].astype(np.float32)
-        mask = ((L > self.l_min) &
+        # 相对阈值（抗渲染光照差异）+ 兜底下限：白桶 = 比全场中位数亮一截且色度中性
+        l_thr = max(self.l_min, float(np.median(L)) + self.l_offset)
+        mask = ((L > l_thr) &
                 (np.abs(A - 128.0) < self.ab_max_dev) &
                 (np.abs(B - 128.0) < self.ab_max_dev)).astype(np.uint8) * 255
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (3, 3))
@@ -207,7 +218,7 @@ class BucketCvPerceptionNode(Node):
             if circularity < self.min_circ:
                 continue
             diam_px = (d_a + d_b) / 2.0
-            diam_m = diam_px / fx * h_m
+            diam_m = diam_px / fx * h_m * self.diam_comp
             # 直径物理先验（免费一致性校验）：0.8m 起飞坪等大白块在此被拒
             if not (_D_DIAM_MIN_M <= diam_m <= _D_DIAM_MAX_M):
                 continue

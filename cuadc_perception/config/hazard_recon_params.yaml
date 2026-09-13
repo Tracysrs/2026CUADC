@@ -3,6 +3,10 @@
 /**:
   ros__parameters:
     image_topic: /camera/image_raw
+    # 09-13 生产切换：压缩透传图（raw 6MB/帧全链 1Hz 不可用，见 01 视觉模块 §4.5）
+    image_compressed: true
+    # 与相机节点 best_effort 发布端匹配；RELIABLE 订阅 + BEST_EFFORT 发布 = 一帧收不到
+    image_qos_reliable: false
     engine_path: /home/nvidia/cuadc_models/best.engine
     # 防错拿错版本（SSOT §4.6）：engine 文件 SHA-256，换权重重建 engine 后必须同步更新
     expected_sha256: "964cd588b2c24da0b11e16db87c6d59056bb43e63e69e21989dc688b500cc724"

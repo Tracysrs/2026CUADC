@@ -316,6 +316,11 @@ private:
     declare_parameter<int>("search_lanes", 6);
     // SSOT P4-3：SEARCH 进行这么久仍无 3 筒锁定 → 提前按"2 筒+1 未知"降级
     declare_parameter<double>("search_degrade_timeout_s", 60.0);
+    // SEARCH 沉降期（2026-09-12 真视觉排障）：起飞后 EKF 在飞行中对齐罗盘航向
+    // （mavros "in-flight yaw alignment complete"），期间喂图的桶世界坐标随 yaw
+    // 漂移，会凑出"稳定"的假航迹导致锁错目标。沉降期内只飞不喂图，等航向收敛。
+    // 真值替身免疫此问题（其换算误差自相消），故 M3 五轮从未暴露。
+    declare_parameter<double>("search_settle_s", 8.0);
 
     declare_parameter<double>("recon_x_m", 52.5);
     declare_parameter<double>("recon_lane_len_m", 5.0);
@@ -451,6 +456,8 @@ private:
     search_lanes_ = std::max(1, static_cast<int>(get_parameter("search_lanes").as_int()));
     search_degrade_timeout_s_ = std::max(
       10.0, get_parameter("search_degrade_timeout_s").as_double());
+    search_settle_s_ = std::max(
+      0.0, get_parameter("search_settle_s").as_double());
 
     recon_x_m_ = get_parameter("recon_x_m").as_double();
     recon_lane_len_m_ = std::max(0.5, get_parameter("recon_lane_len_m").as_double());
@@ -730,7 +737,9 @@ private:
     have_vision_ = true;
     last_vision_time_ = now();
     ++vision_valid_frames_;    // 视觉起飞门禁计数（SSOT §5.4 起飞前 ≥3 帧有效）
-    if (state_ == State::SEARCH) {
+    if (state_ == State::SEARCH &&
+      (now() - state_enter_time_).seconds() > search_settle_s_)
+    {
       const double t = stamp.seconds();
       for (const auto & d : latest_detections_) {
         bucket_map_.update(d.x, d.y, d.diameter, t);
@@ -1865,6 +1874,7 @@ private:
   double search_x_max_m_ = 32.5;
   double search_half_width_m_ = 4.0;
   double search_degrade_timeout_s_ = 60.0;
+  double search_settle_s_ = 8.0;
   double recon_x_m_ = 52.5;
   double recon_lane_len_m_ = 5.0;
   double recon_half_width_m_ = 4.0;

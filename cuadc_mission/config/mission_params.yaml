@@ -54,6 +54,8 @@ cuadc_mission:
                                     # 4 带间距 2.67m 有 0.28m 盲区（09-12 覆盖计算）
     search_degrade_timeout_s: 60.0  # SEARCH 进行此时长仍无 3 筒锁定 → 提前按
                                     # "2筒+1未知"降级（SSOT P4-3），不等航线尽头
+    search_settle_s: 8.0            # SEARCH 沉降期：起飞后 EKF 飞行中罗盘对齐期间
+                                    # 不喂图（防 yaw 漂移凑出假航迹锁错目标，真视觉排障）
     recon_x_m: 52.5                 # 侦察区起始 X（中心 55 ± 2.5）
     recon_lane_len_m: 5.0           # 侦察带位沿 X 分布跨度（09-12 起带沿 Y 长轴扫，
                                     # 此值=带位均布范围；旧语义"带长"已弃）

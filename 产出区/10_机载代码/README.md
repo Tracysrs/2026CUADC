@@ -141,7 +141,7 @@ colcon build --packages-select cuadc_mission
 source install/setup.bash
 
 # 3) 联跑顺序：
-#    ① Gazebo + ArduPilot SITL（见 查阅区/08_参考/sim/cuadc_sim 的说明）
+#    ① Gazebo + ArduPilot SITL（见 查阅区/08_参考/hgd_cudac/sim/cuadc_sim 的说明）
 #    ② ros2 launch mavros apm.launch
 #    ③ 本节点（SITL 用仿真时钟）：
 ros2 launch cuadc_mission mission.launch.py use_sim_time:=true

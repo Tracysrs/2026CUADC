@@ -2,7 +2,7 @@
 # =============================================================================
 # CUADC 机载开发环境一键安装（Ubuntu 22.04）
 #
-# 依据：查阅区/08_参考/sim/cuadc_sim/docs/SETUP.md 的手工步骤自动化；幂等，可重复执行。
+# 依据：查阅区/08_参考/hgd_cudac/sim/cuadc_sim/docs/SETUP.md 的手工步骤自动化；幂等，可重复执行。
 # 用法：
 #   ./setup_env_ubuntu22.sh              # 全量安装（含 ArduPilot SITL 编译，约 40 分钟）
 #   ./setup_env_ubuntu22.sh --skip-heavy # 跳过 SITL/仿真插件编译（先只装 ROS/MAVROS/Gazebo）
@@ -114,8 +114,8 @@ step_workspace() {
     fi
   done
   # HIT 仿真包：目录叫 cuadc_sim，包名叫 cuadc_rescue_sim，工作区内统一用包名
-  if [ -d "$REPO_TOP/查阅区/08_参考/sim/cuadc_sim" ] && [ ! -e "$WORKSPACE/src/cuadc_rescue_sim" ]; then
-    cp -r "$REPO_TOP/查阅区/08_参考/sim/cuadc_sim" "$WORKSPACE/src/cuadc_rescue_sim"
+  if [ -d "$REPO_TOP/查阅区/08_参考/hgd_cudac/sim/cuadc_sim" ] && [ ! -e "$WORKSPACE/src/cuadc_rescue_sim" ]; then
+    cp -r "$REPO_TOP/查阅区/08_参考/hgd_cudac/sim/cuadc_sim" "$WORKSPACE/src/cuadc_rescue_sim"
     log "  拷入 cuadc_rescue_sim（来自 08_参考）"
   fi
   if [ -f "$WORKSPACE/src/cuadc_rescue_sim/scripts/generate_scene.py" ]; then

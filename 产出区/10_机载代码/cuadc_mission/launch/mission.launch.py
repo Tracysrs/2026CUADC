@@ -4,7 +4,7 @@
 
     ros2 launch cuadc_mission mission.launch.py
 
-SITL 仿真（配合 查阅区/08_参考/sim/cuadc_sim 时使用仿真时钟）：
+SITL 仿真（配合 查阅区/08_参考/hgd_cudac/sim/cuadc_sim 时使用仿真时钟）：
 
     ros2 launch cuadc_mission mission.launch.py use_sim_time:=true
 

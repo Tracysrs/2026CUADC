@@ -8,7 +8,7 @@
   python ops.py gps
   python ops.py geo here          # = python site_geo_check.py here
   python ops.py motor COM5 3      # 拆桨状态才允许！只转 M3
-  python ops.py params-diff ../../../../产出区/01_设计/V6X_ardupilot_params.param
+  python ops.py params-diff ../../../产出区/01_设计/V6X_ardupilot_params.param
   python ops.py log list          # Jetson 上用
 
 约定：

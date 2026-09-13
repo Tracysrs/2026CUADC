@@ -20,7 +20,9 @@
         <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat"/>
 
         <scene>
-          <ambient>1.0 1.0 1.0</ambient>
+          <!-- ambient 1.0→0.4（2026-09-13）：1.0 时全场亮度被压平（白桶 L157 vs
+               场地 L155，视觉无法分割）；0.4 后太阳方向光提供对比度，白桶突出 -->
+          <ambient>0.4 0.4 0.4 1</ambient>
           <background>0.78 0.80 0.82</background>
           <sky/>
         </scene>

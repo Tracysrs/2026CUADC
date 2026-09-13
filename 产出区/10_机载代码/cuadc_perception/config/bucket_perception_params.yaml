@@ -1,0 +1,62 @@
+# 真机白桶感知节点参数（bucket_perception_node，M2）
+# 语义：接口契约.md v1.3 §1/§2；算法与分级上线：01_设计/视觉算法设计.md §4/§5
+/**:
+  ros__parameters:
+    # ---- 图像输入（与相机节点 best_effort 匹配；RELIABLE 订阅+BEST_EFFORT 发布=一帧收不到）----
+    image_topic: /camera/image_raw
+    image_compressed: true
+    image_qos_reliable: false
+    image_width: 1920
+    image_height: 1080
+
+    # ---- 相机内参（五件套之三）：比赛模式 allow_uncalibrated 必须 false ----
+    calib_path: /home/nvidia/cuadc_models/camera_calib.yaml
+    allow_uncalibrated: true
+    mount_rot_deg: 0.0        # 装订旋转，首次悬停偏置目标实验标定后回填
+
+    # ---- 高度来源（单目解算，P0.4 同源容差）----
+    odom_topic: /mavros/local_position/odom
+    plane_z_m: 0.30           # 目标参考平面 = 桶口（筒高 30cm）
+    ground_z_offset: 0.0      # EKF 原点开机时在地面 → 0
+    odom_max_delay_s: 1.5
+    odom_future_tol_s: 0.05
+    odom_max_gap_s: 0.2
+    odom_history_span_s: 3.0
+
+    # ---- 主通道 engine（bucket.engine 就位 + SHA 登记后自动升级双通道）----
+    engine_path: /home/nvidia/cuadc_models/bucket.engine
+    expected_sha256: ""       # deploy 后回填；空=跳过校验（仅限调试）
+    imgsz: 640
+    seg_conf_thres: 0.25
+
+    # ---- 副通道 LAB（09-12 仿真标定值，实拍后按 06 坑清单流程复核）----
+    lab_l_min: 160.0
+    lab_l_offset: 10.0
+    lab_ab_max_dev: 22.0
+    lab_min_area_px: 40.0
+    lab_min_circularity: 0.60
+    lab_diam_compensation: 1.15
+    lab_conf_base: 0.55
+    lab_conf_circ_gain: 0.45
+
+    # ---- 双通道融合 ----
+    fuse_iou_thr: 0.5
+    fuse_w_main: 0.55
+    fuse_w_aux: 0.45
+    fuse_agree_bonus: 0.10
+    fuse_main_only_scale: 0.90
+    fuse_aux_only_scale: 0.70
+
+    # ---- 后处理（判据与消费端 drop_logic 同源；感知端独立性=保守 AND 版）----
+    merge_dist_m: 0.02
+    indep_min_dist_m: 0.20
+    indep_min_diam_diff_m: 0.025
+    smooth_window: 5
+    smooth_assoc_gate_m: 0.25
+    min_conf_out: 0.25
+
+    # ---- 运行控制 ----
+    active_states: ""         # 空=全态处理（bench 友好）；正式飞行可设 "SEARCH,ALIGN" 省 CPU
+    contract_version: 1.0
+    frame_id: cuadc_body_flu
+    debug_save_period: 0

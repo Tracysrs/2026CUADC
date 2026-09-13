@@ -9,9 +9,9 @@
 |---|---|---|
 | `cuadc_mission/` | 任务状态机：全生命周期状态机 + 感知接入 + 目标锁定 + 两段对准 + 八门控投放（SSOT §5.1/§5.2） | **M1 骨架 + M3 投放链就绪，待 SITL 验证**（C++ 核心已编译测试 145 项 PASS） |
 | `cuadc_interfaces/` | 自定义消息包：侦察判读 `ReconClassification/ReconMarker`（契约 §5）；SafetyStatus 等 M4 接口后续在此追加 | 就绪 |
-| `cuadc_perception/` | 感知包：假感知 + 契约校验器（真感知 M2 实现）+ 判读融合库 `recon_fusion.py` + 假判读节点 + 地面站查看器（真判读 M4） | 假节点就绪，融合库已单测 |
+| `cuadc_perception/` | 感知包：侦察判读 `hazard_recon_node`（已上机生产）+ **白桶感知 `bucket_perception_node`（M2，双通道 seg+LAB）** + **H 圆精准降落 `h_circle_node`（M4，LANDING_TARGET→PLND）** + 公共算法库 `vision_core.py`（纯算法可离线单测）+ 契约校验器 + 判读融合/查看器/仿真替身 | 09-13 全链代码落地，48 例单测全绿，待上机联调 |
 | `scripts/` | `setup_env_ubuntu22.sh`（环境一键装）+ `run_sitl.sh`（SITL 全链路一键拉起） | 就绪 |
-| `接口契约.md` | 视觉↔状态机↔侦察接口权威文档（字段复用/哨兵/时间戳/心跳/判读消息） | **v1.1 定稿** |
+| `接口契约.md` | 视觉↔状态机↔侦察↔PLND 接口权威文档（字段复用/哨兵/时间戳/心跳/判读消息/LANDING_TARGET 流） | **v1.3 定稿** |
 | `时间同步设计.md` | P0.4：取帧时刻戳 + odom 插值夹逼（代码已就绪，M2 仿真验收） | 设计+代码就绪 |
 
 ### 侦察判读联调（不需要真模型/飞控）
@@ -88,8 +88,10 @@ CEP 中位 5.0cm，五条安全不变量（单发/新鲜度/不同筒/弃桶拉�
   飞手切走 GUIDED 立即停发目标点退让（`PILOT_OVERRIDE`）、`fail`/`fail_and_return` 两级失败
 
 **未实现（fail-closed，触发即安全返航）**：
-- M2 真感知节点：`cuadc_perception` 内实现 YOLOv8n-seg + 单目解算节点（契约 §1 已定，
-  消费端——哨兵校验 + P0.4 插值换算世界系——已在 `bucket_callback` 就绪）
+- ~~M2 真感知节点~~ ✅ **2026-09-13 代码落地**：`bucket_perception_node`（双通道
+  seg+LAB、单目解算、后处理四件、LAB-only 分级上线）+ `h_circle_node`（H 圆 +
+  LANDING_TARGET→ArduPilot PLND）+ 公共库 `vision_core.py`——本机 48 例单测全绿，
+  **待上机过契约校验接状态机**（模型/标定/外场项见《01_设计/视觉算法设计.md》§8/§9）
 - M4 安全监控：`TODO(M4)` —— safety_monitor 独立进程、丢目标降级、证据落盘联调
 
 **M3 已实现（投放链，2026-09-07）**：

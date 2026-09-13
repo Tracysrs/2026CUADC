@@ -20,6 +20,15 @@ source /opt/ros/humble/setup.bash
 source "$HOME/cuadc_ws/install/setup.bash"
 FCU="${FCU_URL:-tcp://127.0.0.1:5760}"
 
+echo "[0] 强清残留（僵尸任务节点会共享 mavros 抢指令——2026-09-13 实证：
+#    残留 DISARM 态节点每秒发 disarm 把新任务在空中打下来）"
+pkill -f "cuadc_mission_[n]ode" 2>/dev/null
+pkill -f "mavros_[n]ode" 2>/dev/null
+pkill -f "bucket_cv_[p]erception" 2>/dev/null
+pkill -f "virtual_drop_[j]udge" 2>/dev/null
+pkill -f "scene_truth_[p]erception" 2>/dev/null
+sleep 2
+
 echo "[1] 启动 mavros（$FCU）"
 if ss -tnp 2>/dev/null | grep -q ':5760'; then
   echo "  ABORT: 5760 已被占用（SERIAL0 单客户端）："
@@ -57,7 +66,8 @@ echo "[4] 启动虚拟判定节点 + CV 白桶真感知（gz 相机直订，带�
 JPID=$!
 ( for i in 1 2 3 4 5 6 7 8 9 10; do
     PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python \
-      ros2 run cuadc_perception bucket_cv_perception_node \
+      ros2 run cuadc_perception bucket_cv_perception_node --ros-args \
+      -p l_min:=150.0 -p debug_save_period:=120 \
       >> "$LOG/cv_perception.log" 2>&1
     echo "[watchdog] cv_perception 退出(第${i}次), 1s 后重启" >> "$LOG/cv_perception.log"
     sleep 1
@@ -73,7 +83,9 @@ sleep 2
 ros2 run cuadc_mission cuadc_mission_node --ros-args \
   --params-file "$HOME/cuadc_ws/src/cuadc_mission/config/mission_params.yaml" \
   -p m1_no_vision_mode:=false -p sim_release_bridge:=true \
-  -p auto_arm_on_guided:=true > "$LOG/mission.log" 2>&1 &
+  -p auto_arm_on_guided:=true \
+  -p search_speed_m_s:=1.2 -p search_degrade_timeout_s:=120.0 \
+  > "$LOG/mission.log" 2>&1 &
 NPID=$!
 
 echo "[6] 外部切 GUIDED（WAIT_GUIDED 放行扳机，等效飞手确认）"

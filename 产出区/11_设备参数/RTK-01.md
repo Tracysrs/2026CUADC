@@ -34,7 +34,7 @@
 | 差分链路 | **内置 LoRa 接收 890~915MHz**，22dBm / -115dBm，标称 10km（与 B 配对自动收改正） |
 | 串口 | UART **出厂 921600**，NMEA-0183 输出 |
 | 罗盘 | QMC5883 三轴磁力计（ArduPilot 安装方向 **Yaw315°**；PX4 为 Roll180+Yaw45） |
-| 接口 | GH1.25-6P：GND / SCL / VCC(5V) / RX / SDA / TX（针序以规格书图为准，**装机前万用表实测 5V/GND**）+ USB Type C（调试） |
+| 接口 | GH1.25-6P（插座 A1254WF-06A，6PIN-1.25 卧贴）：**1=GND / 2=VCC(5V) / 3=RX / 4=TX / 5=SCL / 6=SDA**（规格书 P9 实表；2026-09-15 勘正旧串列误读，接线映射见 12 册 09_接线图 §4.3）+ USB Type C（调试） |
 | 供电 | 5V / 110mA |
 | 尺寸/重量 | 48.07 × 48.07 × 39.0mm；30.6g |
 | 指示 | LED×3：LORA（LoRa/RTK 链路）、RTK（Fix 状态；GPS 级另计）、PPS；另有 USB Type C |

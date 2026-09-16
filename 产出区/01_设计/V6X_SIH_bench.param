@@ -1,0 +1,32 @@
+# V6X SIH 台架参数（叠加层）—— 2026-09-15
+# 用法：刷入 SIH 固件后，先导入 V6X_ardupilot_params.param（真机任务参数），
+#       再导入本文件（SIH 覆盖层），重启生效。
+# 红线：本套参数仅配合 SIH 台架固件使用；外场前必须重刷锁定 beta 固件
+#       并恢复真机参数（步骤见 03_工具/飞控调试/SIH台架操作.md §5）。
+# 依据：Tools/scripts/sitl-on-hardware/default.param @ dbe79216（构建期已内嵌，
+#       此处显式写入便于回读核对）。
+
+# --- 仿真传感器源（SIH 核心三件） ---
+AHRS_EKF_TYPE,10
+GPS1_TYPE,100
+SIM_MAG1_DEVID,97539
+
+# --- 仿真节拍 ---
+SIM_RATE_HZ,400
+SCHED_LOOP_RATE,400
+
+# --- 板级杂项（SIH 官方默认） ---
+BRD_RTC_TYPES,2
+BRD_HEAT_TARG,25
+BRD_SAFETY_DEFLT,0
+
+# --- 起始位置（按需修改；不写则默认堪培拉，GCS 地图在世界另一头属正常） ---
+SIM_OPOS_LAT,30.000000
+SIM_OPOS_LNG,104.000000
+SIM_OPOS_ALT,400
+SIM_OPOS_HDG,90
+
+# --- 输出直驱分级（SIM_OH_MASK，bit0=通道1） ---
+#   768  = 0x300 = 仅 SERVO9/10（舵机释放链，先跑这个）
+#   783  = 0x30F = 舵机 + 电机 1~4（拆桨后才能开）
+SIM_OH_MASK,768

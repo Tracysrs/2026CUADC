@@ -26,25 +26,35 @@ echo "HEAD=$ACTUAL"
 echo "期望=$SRC_PIN"
 [ "$ACTUAL" = "$SRC_PIN" ] || echo "WARN: HEAD 与锚点不一致——SIH 固件将偏离飞行固件同源原则"
 
-echo "== [2/5] apt 依赖（Ubuntu 22.04 自带 gcc-arm-none-eabi 10.3 可用）"
-sudo apt-get update -y || echo "WARN: apt update 失败，继续用现有索引"
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential ccache git python3 python3-dev python3-pip gettext libtool \
-  gcc-arm-none-eabi g++-arm-none-eabi
+echo "== [2/5] 工具链（优先免 root 用户级工具链 ~/tcroot，回退 apt）"
+TC=~/tcroot/usr/bin
+if [ -x "$TC/arm-none-eabi-gcc" ]; then
+  export PATH="$TC:$PATH"
+  echo "使用用户级工具链: $TC"
+else
+  echo "未发现 ~/tcroot，尝试 apt（需要 sudo 免密或交互输密码）"
+  sudo apt-get update -y || echo "WARN: apt update 失败，继续用现有索引"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential ccache git python3 python3-dev python3-pip gettext libtool \
+    gcc-arm-none-eabi g++-arm-none-eabi
+fi
+arm-none-eabi-gcc --version | head -1 || { echo "FATAL: arm-none-eabi-gcc 不可用"; exit 1; }
 
 echo "== [3/5] python 依赖（empy 3.3.4 是 ChibiOS 构建硬依赖，版本不能高）"
-pip3 install --user -q "empy==3.3.4" pyserial pexpect || {
+pip3 install --user -q "empy==3.3.4" pyserial pexpect 2>/dev/null || {
   echo "pip 直连失败，切清华 pypi 镜像重试"
   pip3 install --user -q -i https://pypi.tuna.tsinghua.edu.cn/simple "empy==3.3.4" pyserial pexpect; }
 
-echo "== [4/5] 编译（四轴 X 机架 + Multicopter 仿真类，extra-hwdef 由官方脚本拼装）"
+echo "== [4/5] 编译（四轴 X 机架 + MultiCopter 仿真类，extra-hwdef 由官方脚本拼装）"
+# 注意：pin dbe79216 处类名是 MultiCopter（大写 C，SIM_Multicopter.h:30），
+# master 已改名 Multicopter——换 pin 必须同步核对 libraries/SITL/SIM_Multicopter.h
 rm -rf build/CUAV-V6X-v2
 ./Tools/scripts/sitl-on-hardware/sitl-on-hw.py \
-  --board CUAV-V6X-v2 --vehicle copter --frame quad --simclass Multicopter
+  --board CUAV-V6X-v2 --vehicle copter --frame quad --simclass MultiCopter
 
 echo "== [5/5] 收产物"
 mkdir -p "$OUT_DIR"
-B=build/CUAV-V6X-v2/binaries
+B=build/CUAV-V6X-v2/bin
 ls "$B"
 cp -v "$B"/arducopter.apj "$OUT_DIR/arducopter_SIH_CUAV-V6X-v2.apj"
 [ -f "$B"/arducopter.bin ] && cp -v "$B"/arducopter.bin "$OUT_DIR/arducopter_SIH_CUAV-V6X-v2.bin"

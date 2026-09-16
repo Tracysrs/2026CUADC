@@ -7,8 +7,9 @@
 
 | 文件 | 来源 | git_identity | 用途 |
 |---|---|---|---|
-| `arducopter_beta_CUAV-V6X-v2.apj` | [ArduPilot 官方 beta](https://firmware.ardupilot.org/Copter/beta/CUAV-V6X-v2/arducopter.apj) | `dbe79216` | 方案 §3.2 定案：锁定验证过的 beta（先台架验证再定版） |
+| `arducopter_beta_CUAV-V6X-v2.apj` | [ArduPilot 官方 beta](https://firmware.ardupilot.org/Copter/beta/CUAV-V6X-v2/arducopter.apj) | `dbe79216` | 方案 §3.2 定案：锁定验证过的 beta（先台架验证再定版）——**比赛日飞行固件** |
 | `arducopter_CUAV_AP4.6.3.apj` | [CUAV 手册编译版](https://manual.cuav.net/controller/firmware/arducopter.apj) | `92b0cd78` | 备选：AP 4.6.3 稳定版，beta 出问题时回退 |
+| `arducopter_beta_CUAV-V6X-v2_SIH_台架专用.apj` | 自编译（Jetson Orin Nano，xpack gcc-arm-none-eabi 10.3.1，官方 sitl-on-hw 流程，四轴 X + MultiCopter 仿真类） | `dbe79216`（同上，+SIM_ENABLED） | **SIH 台架仿真专用，禁止外场**——真飞控跑全任务+SIM_OH_MASK 真舵机/电机输出；计划见 `01_设计/SIH台架仿真计划.md`，操作见 `03_工具/飞控调试/SIH台架操作.md`；SHA256 见 `SIH固件_SHA256SUMS.txt`（2026-09-16 编译） |
 
 > v2 板 ArduPilot 无正式版固件，官方渠道只有 beta；CUAV 手册提供 4.6.3 编译版作为稳定替代。
 > 刷错板型固件 = 变砖风险：v1（Pixhawk6X）板**不要**刷本目录文件。

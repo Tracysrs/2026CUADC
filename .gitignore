@@ -15,6 +15,7 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/AGENTS.md
 !/总体方案与执行计划.md
 
 # 放行：模块目录

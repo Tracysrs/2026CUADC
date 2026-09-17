@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="880" viewBox="0 0 1240 880" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+  <defs>
+    <style>
+      .title{font-size:27px;font-weight:bold;fill:#1a1a1a}
+      .subtitle{font-size:14.5px;fill:#555}
+      .boxtitle{font-size:15px;font-weight:bold;fill:#fff}
+      .boxsub{font-size:11.5px;fill:#556}
+      .pinname{font-size:15px;font-weight:bold;fill:#1a1a1a}
+      .pindesc{font-size:11px;fill:#666}
+      .pinnum{font-size:13px;font-weight:bold;fill:#fff}
+      .chip{font-size:12px;font-weight:bold}
+      .memosmall{font-size:11px;font-weight:bold;fill:#8a6d1a;letter-spacing:2px}
+      .memobig{font-size:14.5px;font-weight:bold;fill:#5c4708}
+      .noteT{font-size:13.5px;font-weight:bold}
+      .note{font-size:12px;fill:#333}
+      .cap{font-size:10.5px;fill:#667}
+      .foot{font-size:11.5px;fill:#777}
+    </style>
+  </defs>
+
+  <rect width="1240" height="880" fill="#ffffff"/>
+
+  <!-- ===== 标题 ===== -->
+  <text class="title" x="48" y="54">RTK-01-R（rover）↔ CUAV V6X GPS2 · 接线针脚图</text>
+  <text class="subtitle" x="48" y="82">6P 自制线 · 循环移位：FC k 针 → rover k+1 针（6 绕回 1）· 严禁 1:1 直通</text>
+  <text class="subtitle" x="1192" y="82" text-anchor="end">本链路＝备用/测试（SSOT 定案：纯 GPS+视觉 为主方案）</text>
+
+  <!-- ===== 主面板 ===== -->
+  <rect x="36" y="104" width="1168" height="596" rx="14" fill="#f8fafc" stroke="#d5dde5"/>
+
+  <!-- 循环移位记法横幅 -->
+  <rect x="430" y="126" width="380" height="48" rx="8" fill="#fff7e6" stroke="#e8b64a"/>
+  <text class="memosmall" x="620" y="144" text-anchor="middle">MAPPING RULE · 记法</text>
+  <text class="memobig" x="620" y="164" text-anchor="middle">FC k 针 → rover k+1 针（6 绕回 1）</text>
+
+  <!-- ===== 左：V6X GPS2 座 ===== -->
+  <rect x="76" y="150" width="252" height="520" rx="10" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+  <path d="M76,160 a10,10 0 0 1 10,-10 h232 a10,10 0 0 1 10,10 v24 h-252 z" fill="#1a73e8"/>
+  <text class="boxtitle" x="202" y="177" text-anchor="middle">CUAV Pixhawk V6X v2</text>
+  <text class="boxsub" x="202" y="206" text-anchor="middle">GPS2 座 · GH1.25 6P · SERIAL4（备用 GPS 口）</text>
+
+  <!-- GPS2 针脚（针1 在上） -->
+  <g>
+    <rect x="96" y="232" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="260" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="264.5" text-anchor="middle">1</text>
+    <text class="pinname" x="142" y="257">5V+</text><text class="pindesc" x="142" y="275">5V 电源输出（来自 PMU）</text>
+
+    <rect x="96" y="304" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="332" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="336.5" text-anchor="middle">2</text>
+    <text class="pinname" x="142" y="329">TX</text><text class="pindesc" x="142" y="347">串口发送 · SERIAL4</text>
+
+    <rect x="96" y="376" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="404" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="408.5" text-anchor="middle">3</text>
+    <text class="pinname" x="142" y="401">RX</text><text class="pindesc" x="142" y="419">串口接收</text>
+
+    <rect x="96" y="448" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="476" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="480.5" text-anchor="middle">4</text>
+    <text class="pinname" x="142" y="473">SCL</text><text class="pindesc" x="142" y="491">I2C 时钟（外置罗盘）</text>
+
+    <rect x="96" y="520" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="548" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="552.5" text-anchor="middle">5</text>
+    <text class="pinname" x="142" y="545">SDA</text><text class="pindesc" x="142" y="563">I2C 数据（外置罗盘）</text>
+
+    <rect x="96" y="592" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="118" cy="620" r="13" fill="#1a73e8"/><text class="pinnum" x="118" y="624.5" text-anchor="middle">6</text>
+    <text class="pinname" x="142" y="617">GND</text><text class="pindesc" x="142" y="635">地</text>
+  </g>
+  <text class="cap" x="202" y="662" text-anchor="middle">座丝印对准再插 · 飞控箭头朝机头</text>
+
+  <!-- ===== 右：RTK-01-R rover ===== -->
+  <rect x="912" y="150" width="252" height="520" rx="10" fill="#ffffff" stroke="#188038" stroke-width="1.5"/>
+  <path d="M912,160 a10,10 0 0 1 10,-10 h232 a10,10 0 0 1 10,10 v24 h-252 z" fill="#188038"/>
+  <text class="boxtitle" x="1038" y="177" text-anchor="middle">瑞杰 RTK-01-R（rover）</text>
+  <text class="boxsub" x="1038" y="206" text-anchor="middle">6P 插座 A1254WF-06A（GH1.25 卧贴）</text>
+
+  <!-- rover 针脚（规格书 P9 实表，针1 在上） -->
+  <g>
+    <rect x="932" y="232" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="260" r="13" fill="#188038"/><text class="pinnum" x="954" y="264.5" text-anchor="middle">1</text>
+    <text class="pinname" x="978" y="257">GND</text><text class="pindesc" x="978" y="275">地</text>
+
+    <rect x="932" y="304" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="332" r="13" fill="#188038"/><text class="pinnum" x="954" y="336.5" text-anchor="middle">2</text>
+    <text class="pinname" x="978" y="329">VCC</text><text class="pindesc" x="978" y="347">电源输入 5V</text>
+
+    <rect x="932" y="376" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="404" r="13" fill="#188038"/><text class="pinnum" x="954" y="408.5" text-anchor="middle">3</text>
+    <text class="pinname" x="978" y="401">RX</text><text class="pindesc" x="978" y="419">串口数据接收</text>
+
+    <rect x="932" y="448" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="476" r="13" fill="#188038"/><text class="pinnum" x="954" y="480.5" text-anchor="middle">4</text>
+    <text class="pinname" x="978" y="473">TX</text><text class="pindesc" x="978" y="491">串口数据发送</text>
+
+    <rect x="932" y="520" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="548" r="13" fill="#188038"/><text class="pinnum" x="954" y="552.5" text-anchor="middle">5</text>
+    <text class="pinname" x="978" y="545">SCL</text><text class="pindesc" x="978" y="563">地磁 I2C 时钟线</text>
+
+    <rect x="932" y="592" width="212" height="56" rx="7" fill="#fdfdfd" stroke="#c9d4e0"/>
+    <circle cx="954" cy="620" r="13" fill="#188038"/><text class="pinnum" x="954" y="624.5" text-anchor="middle">6</text>
+    <text class="pinname" x="978" y="617">SDA</text><text class="pindesc" x="978" y="635">地磁 I2C 数据线</text>
+  </g>
+  <text class="cap" x="1038" y="662" text-anchor="middle">48×48mm · 5V/110mA · 出厂 UART 921600</text>
+
+  <!-- ===== 6 根线（白描边打底防粘连，GND 最后画盖在上层） ===== -->
+  <!-- FC1 → R2 5V 红 -->
+  <path d="M328,260 C520,260 720,332 912,332" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,260 C520,260 720,332 912,332" fill="none" stroke="#d93025" stroke-width="3.5"/>
+  <!-- FC2 → R3 TX→RX 橙 -->
+  <path d="M328,332 C520,332 720,404 912,404" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,332 C520,332 720,404 912,404" fill="none" stroke="#e8710a" stroke-width="3.5"/>
+  <!-- FC3 → R4 RX→TX 绿 -->
+  <path d="M328,404 C520,404 720,476 912,476" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,404 C520,404 720,476 912,476" fill="none" stroke="#188038" stroke-width="3.5"/>
+  <!-- FC4 → R5 SCL 蓝 -->
+  <path d="M328,476 C520,476 720,548 912,548" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,476 C520,476 720,548 912,548" fill="none" stroke="#1a73e8" stroke-width="3.5"/>
+  <!-- FC5 → R6 SDA 紫 -->
+  <path d="M328,548 C520,548 720,620 912,620" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,548 C520,548 720,620 912,620" fill="none" stroke="#9334e6" stroke-width="3.5"/>
+  <!-- FC6 → R1 GND 黑（大跨线，最后画=桥接在上） -->
+  <path d="M328,620 C520,712 780,690 912,260" fill="none" stroke="#ffffff" stroke-width="7"/>
+  <path d="M328,620 C520,712 780,690 912,260" fill="none" stroke="#202124" stroke-width="3.5"/>
+
+  <!-- 线标签 -->
+  <g>
+    <rect x="570" y="286" width="100" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#d93025" stroke-width="0.8"/>
+    <text class="chip" x="620" y="300" text-anchor="middle" fill="#d93025">FC1→R2 · 5V</text>
+
+    <rect x="552" y="358" width="136" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#e8710a" stroke-width="0.8"/>
+    <text class="chip" x="620" y="372" text-anchor="middle" fill="#e8710a">FC2→R3 · TX→RX</text>
+
+    <rect x="552" y="430" width="136" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#188038" stroke-width="0.8"/>
+    <text class="chip" x="620" y="444" text-anchor="middle" fill="#188038">FC3→R4 · RX→TX</text>
+
+    <rect x="560" y="502" width="120" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#1a73e8" stroke-width="0.8"/>
+    <text class="chip" x="620" y="516" text-anchor="middle" fill="#1a73e8">FC4→R5 · SCL</text>
+
+    <rect x="560" y="574" width="120" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#9334e6" stroke-width="0.8"/>
+    <text class="chip" x="620" y="588" text-anchor="middle" fill="#9334e6">FC5→R6 · SDA</text>
+
+    <rect x="560" y="646" width="120" height="20" rx="10" fill="#ffffff" opacity="0.92" stroke="#202124" stroke-width="0.8"/>
+    <text class="chip" x="620" y="660" text-anchor="middle" fill="#202124">FC6→R1 · GND</text>
+  </g>
+
+  <!-- ===== 底部三张提示卡 ===== -->
+  <!-- 1 红色：严禁直通 -->
+  <rect x="36" y="716" width="372" height="118" rx="10" fill="#fdf0ef" stroke="#d93025" stroke-width="1.2"/>
+  <text class="noteT" x="52" y="740" fill="#d93025">❌ 严禁 1:1 直通</text>
+  <text class="note" x="52" y="762">直插＝FC 针1(5V+) 撞 rover 针1(GND)＝对地短路</text>
+  <text class="note" x="52" y="782">（09-11 上电灯不亮实锤）；记法 FC k → R k+1，6 绕回 1</text>
+  <text class="note" x="52" y="802">GPS1(10P) 留给 NEO-3 原配线整插（安全开关+蜂鸣器</text>
+  <text class="note" x="52" y="822">是 ESC 校准依赖）——RTK 固定走 GPS2。</text>
+
+  <!-- 2 琥珀：万用表防呆 -->
+  <rect x="424" y="716" width="372" height="118" rx="10" fill="#fff8eb" stroke="#b45309" stroke-width="1.2"/>
+  <text class="noteT" x="440" y="740" fill="#b45309">⚠️ 上电前万用表逐针（家规）</text>
+  <text class="note" x="440" y="762">规格书针位图＝模块正面视角；线壳插针面会左右镜像</text>
+  <text class="note" x="440" y="782">插前实测：rover 侧唯一 ~5V 针必须＝针 2（VCC）</text>
+  <text class="note" x="440" y="802">插座 A1254WF-06A（6PIN-1.25 卧贴），线缆自制；</text>
+  <text class="note" x="440" y="822">插反或错位一格＝事故；插前对准丝印▲再插</text>
+
+  <!-- 3 绿色：飞控参数 -->
+  <rect x="812" y="716" width="372" height="118" rx="10" fill="#eef7f0" stroke="#188038" stroke-width="1.2"/>
+  <text class="noteT" x="828" y="740" fill="#188038">飞控参数（一键：ops.py rtk）</text>
+  <text class="note" x="828" y="762">GPS2_TYPE=3(NMEA) · SERIAL4_BAUD=921（4.7-beta 无 GPS2_BAUD）</text>
+  <text class="note" x="828" y="782">GPS_AUTO_SWITCH=0 只看不切 · 罗盘 QMC5883 装向 Yaw315°</text>
+  <text class="note" x="828" y="802">改正走内置 LoRa（基站自动发），不占 433 数传</text>
+  <text class="note" x="828" y="822">LED：LORA=链路 · RTK=Fix · PPS=定位成功</text>
+
+  <!-- ===== 页脚依据 ===== -->
+  <text class="foot" x="620" y="860" text-anchor="middle">依据：CUAV V6X 官方引脚图（doc.cuav.net pinouts）×《瑞杰 RTK-01-R 规格书 V1.0》P9 实表 · 2026-09-15 针序勘误口径（12册 09_接线图.md §4.3）· 线缆自制、禁用直通排线</text>
+</svg>

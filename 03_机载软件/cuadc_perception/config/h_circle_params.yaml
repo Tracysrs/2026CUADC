@@ -1,0 +1,48 @@
+# H 圆感知与精准降落节点参数（h_circle_node，M4 提前实现）
+# 语义：接口契约.md v1.3 §4；算法：01_视觉感知/视觉算法设计.md §6；飞控侧 PLND 参数见 03_操作模块
+/**:
+  ros__parameters:
+    # ---- 图像输入（与桶节点同款 QoS 匹配）----
+    image_topic: /camera/image_raw
+    image_compressed: true
+    image_qos_reliable: false
+    image_width: 1920
+    image_height: 1080
+
+    # ---- 高度（H 圆贴地 → plane_z=0，只留地面偏置）----
+    odom_topic: /mavros/local_position/odom
+    calib_path: /home/nvidia/cuadc_models/camera_calib.yaml
+    allow_uncalibrated: true
+    mount_rot_deg: 0.0        # 与桶节点同值：装订旋转一次标定两处共用
+    ground_z_offset: 0.0
+    odom_max_delay_s: 1.5
+    odom_future_tol_s: 0.05
+    odom_max_gap_s: 0.2
+    odom_history_span_s: 3.0
+
+    # ---- 检测后端：both = YOLO 主 + Hough 兜底（engine 缺失自动 Hough）----
+    backend: both
+    engine_path: /home/nvidia/cuadc_models/h_circle.engine
+    expected_sha256: ""       # h_marker 模型部署后回填
+    imgsz: 640
+    det_conf_thres: 0.25
+    hough_radius_tol: 0.35
+    hough_param1: 120.0
+    hough_param2: 40.0
+    hough_h_score_min: 0.45   # H 图案验证下限；0=关闭（误拒由确认窗兜底）
+
+    # ---- 质量门控（不过不发目标 → PLND 自然普通降落，fail-safe）----
+    h_diam_m: 0.80
+    h_diam_tol_m: 0.25
+    confirm_frames: 3
+    fuse_iou_thr: 0.5
+
+    # ---- LANDING_TARGET 发布 ----
+    landing_target_topic: /mavros/landing_target/set
+    lt_frame: BODY_FRD        # 轴序与 BODY_NED 相同（y右z下）；上机后按 4.7 固件核验
+    max_rate_hz: 20.0         # PLND 要求 ≥10Hz
+    heartbeat_topic: /perception/heartbeat_land
+    debug_pose_topic: /perception/h_circle_body
+    mission_state_topic: /cuadc/mission_state
+    active_states: ""         # 正式飞行建议 "RETURN_HOME,LAND" 省 CPU
+    debug_save_period: 0

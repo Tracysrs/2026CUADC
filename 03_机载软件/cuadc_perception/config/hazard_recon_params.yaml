@@ -1,0 +1,33 @@
+# 真侦察判读节点参数（hazard_recon_node）
+# 语义见 03_机载软件/接口契约.md §5 与 06_使用说明书/01_视觉模块.md §5/§6
+/**:
+  ros__parameters:
+    image_topic: /camera/image_raw
+    # 09-13 生产切换：压缩透传图（raw 6MB/帧全链 1Hz 不可用，见 01 视觉模块 §4.5）
+    image_compressed: true
+    # 与相机节点 best_effort 发布端匹配；RELIABLE 订阅 + BEST_EFFORT 发布 = 一帧收不到
+    image_qos_reliable: false
+    engine_path: /home/nvidia/cuadc_models/best.engine
+    # 防错拿错版本（SSOT §4.6）：engine 文件 SHA-256，换权重重建 engine 后必须同步更新
+    expected_sha256: "964cd588b2c24da0b11e16db87c6d59056bb43e63e69e21989dc688b500cc724"
+    imgsz: 640
+    det_conf_thres: 0.10
+    nms_iou: 0.60
+    comp_iou: 0.45
+    # 帧级门控（SSOT §4.4；逐类标定后此处覆盖 recon_fusion 默认值）
+    reject_top1: 0.7
+    reject_margin: 0.3
+    gray_top1_high: 0.85
+    gray_margin_high: 0.45
+    boost_scale: 2.0
+    # 窗口融合
+    window_duration_s: 4.0
+    assoc_iou: 0.3
+    min_frames: 5
+    min_median_conf: 0.8
+    vote_ratio: 3.0
+    require_recon_state: true
+    ack_delay_s: 0.05
+    # 证据落盘
+    evidence_enabled: true
+    evidence_dir: ~/recon_evidence

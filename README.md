@@ -37,7 +37,7 @@
 
 ## 版本管理
 
-**单一仓库统一管理全项目自研内容**，远程：https://github.com/Tracysrs/CUADC （Private）。
+**单一仓库统一管理全项目自研内容**，远程：https://github.com/Tracysrs/2026CUADC （Private）。
 
 历史说明：`03_机载软件/` 曾独立成库（Tracysrs/CUADC，Jetson 侧开发），2026-09-13 以子树合并方式
 并入本仓，双方提交历史均完整保留，临时远程 CUADC-root 同日退役删除。

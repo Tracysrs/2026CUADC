@@ -4,7 +4,7 @@
 用法: python servo_test.py [COM口] [舵机列表]   默认 COM5、SERVO9；测两路: servo_test.py COM5 9,10
 
 对应 Jetson 侧的 fc_servo_test.sh（ROS2/mavros 版）——逻辑一致：
-  前提核验 → 解会话级安全开关 → 1500→1100(收拢)→1900(释放)→…→1500 时序。
+  前提核验 → 解会话级安全开关 → 1500→1100(收拢)→1600(释放)→…→1500 时序。
 判读：每步回读 SERVO_OUTPUT_RAW 实证飞控侧 PWM 真在走——
   PWM 走了而舵机本体不动 = 舵机没电（输出母线悬空，需 UBEC 5V 注入并共地，02 结构模块 §4 铁律1）。
 ⚠️ DO_SET_SERVO 不解锁、不转桨，但按台架纪律拆桨状态下操作。
@@ -23,7 +23,7 @@ if any(s not in (9, 10, 11, 12, 13, 14) for s in SERVOS):
 LOOP = len(sys.argv) > 3 and sys.argv[3] == "loop"  # 连续收拢/释放，台架边扫边查线
 
 STOW = 1100     # 与 mission_params.yaml servo_stowed_pwm 一致
-RELEASE = 1900  # 与 servo_release_pwm 一致
+RELEASE = 1600  # 与 servo_release_pwm 一致（09-19 拍板，原 1900）
 CMD_DO_SET_SERVO = 183
 
 # 时序与 Jetson 版 fc_servo_test.sh 完全同源：(PWM, 停留秒, 说明)

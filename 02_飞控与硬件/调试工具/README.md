@@ -19,9 +19,10 @@
 | `fc_log_pull.py` | **在 Jetson 上跑**：mavftp 拉飞控 SD 卡 dataflash 日志，`list` 列目录 / `get 名字` 拉取。注意 `cmd_get` 异步，正式拉取用 `python3 -m pymavlink.mavftp --device /dev/cuadc-fc --burst_read_size 239 get /APM/Logs/x.BIN 本地路径`（见 2026-09-09 日志 §八） |
 | `fc_armrun.sh` | **在 Jetson 上跑**：解锁试跑·状态机路径。临时放宽 ARMING_SKIPCHK/FS_THR_ENABLE（trap 兜底恢复+回读校验），任务状态机自动解锁尝试。无 GPS 时会卡 WAIT_NAV_STABLE（见 2026-09-09 日志 §九） |
 | `fc_armtest.sh` | **在 Jetson 上跑**：解锁试跑·直接路径。绕过状态机直接 CommandBool 解锁 10s → 上锁。无 GPS 时被固件强制位置检查拒绝（`Arm: Need Position Estimate`），参数同样临时改+自动恢复 |
-| `fc_servo_test.sh` | **在 Jetson 上跑**：舵机投放时序（DO_SET_SERVO，收拢 1100/释放 1900 与任务逻辑同源），自动解会话安全锁 + SERVOx_FUNCTION 检查。`SERVO_NUM=10` 测 A2。舵机不动的根因排查见 2026-09-09 日志 §舵机排障（系统无 5V 源） |
+| `fc_servo_test.sh` | **在 Jetson 上跑**：舵机投放时序（DO_SET_SERVO，收拢 1100/释放 1600 与任务逻辑同源），自动解会话安全锁 + SERVOx_FUNCTION 检查。`SERVO_NUM=10` 测 A2。舵机不动的根因排查见 2026-09-09 日志 §舵机排障（系统无 5V 源） |
 | `fc_servo_diag.sh` | **在 Jetson 上跑**：舵机不动时的诊断——解会话安全锁 + 抓 `/mavros/rc/out` 看飞控输出通道是否真在变值（区分"指令没到"与"舵机没电"） |
 | `servo_test.py` | 舵机逐通道测试（本机，ops.py `servo` 命令入口）：现场改 FUNCTION=0 的通道逐个出 PWM；测完可用 `params-diff` 核对恢复情况 |
+| `servo_position.py` | 舵机定位保持（本机）：把 AUX 舵机打到指定 PWM（默认 COM5、SERVO9,10、1100 收拢）并每 5s 重发持续保持，供装盘/装爪相位定位（09-19 新增）；流程=带电 1100 定位→装舵机盘→换齿位微调，不动 PWM 口径；Ctrl-C/杀进程即停 |
 | `sih_jetson_build.sh` | **在 Jetson 上跑**：SIH 台架固件一键原生编译（xpack 工具链 + 子模块离线部署），产物归档 `../firmware/`；编译坑实录见 2026-09-16 日志会话三 |
 
 SIH 台架在环仿真（计划 / 操作手册 / V6X_SIH_bench.param）在 [../../04_仿真/SIH台架/](../../04_仿真/SIH台架/SIH台架操作.md)。

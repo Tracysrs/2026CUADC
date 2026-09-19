@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # 舵机投放测试：DO_SET_SERVO 驱动 SERVO9(A1)/SERVO10(A2) 按投放逻辑的 PWM 跑
-# 释放(1900) → 回仓(1100) 循环，验证接线/方向/BEC 供电。
+# 释放(1600) → 回仓(1100) 循环，验证接线/方向/BEC 供电。
 # ⚠️ DO_SET_SERVO 无需解锁即可生效（SERVOx_FUNCTION=0 前提），输出不受解锁态限制。
 # 用法：bash fc_servo_test.sh          # 默认 SERVO9（A1）
 #       SERVO_NUM=10 bash fc_servo_test.sh   # 测 A2
@@ -16,7 +16,7 @@ source "$HOME/cuadc_ws/install/setup.bash"
 FCU="${FCU_URL:-/dev/cuadc-fc:115200}"
 SERVO="${SERVO_NUM:-9}"
 STOW=1100     # 与 mission_params.yaml servo_stowed_pwm 一致
-RELEASE=1900  # 与 servo_release_pwm 一致
+RELEASE=1600  # 与 servo_release_pwm 一致（09-19 拍板，原 1900）
 MPID=""; PUMP=""
 
 ros2 daemon stop > /dev/null 2>&1 || true

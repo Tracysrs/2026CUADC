@@ -138,5 +138,5 @@ cuadc_mission:
     servo_channel_1: 9               # AUX1..4 对应 SERVO9..12
     servo_channel_2: 10
     servo_stowed_pwm: 1100.0         # 收拢
-    servo_release_pwm: 1900.0        # 释放
+    servo_release_pwm: 1600.0        # 释放（09-19 台架三档试探拍板，原 1900）
     enable_release_output: false     # 干跑开关：false 只打日志不发舵机（实弹改 true）

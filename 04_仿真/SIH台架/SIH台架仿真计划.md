@@ -53,7 +53,7 @@
 | # | 动作 | 验收 |
 |---|---|---|
 | C1 | `ops.py params-export` 全量备份 → 刷 SIH 固件 → 导入 B1 模板 → 重启 | 心跳正常、模式列表正常、SIH 参数生效（回读） |
-| C2 | `SIM_OH_MASK=0x300`（仅 SERVO9/10）→ 跑任务至 RELEASE | `SERVO_OUTPUT_RAW` 回读 1100/1900 逐拍跟上（对照 servo_test 基线） |
+| C2 | `SIM_OH_MASK=0x300`（仅 SERVO9/10）→ 跑任务至 RELEASE | `SERVO_OUTPUT_RAW` 回读 1100/1600 逐拍跟上（对照 servo_test 基线） |
 | C3 | 加电机位 → 全任务 18 态（解锁→…→DONE） | 电机跟随姿态/油门，任务态推进无卡死 |
 | C4 | 重刷锁定 beta `.apj` → 恢复 C1 备份 → `verify_params --diff` | diff 干净，飞行固件回归原态 |
 

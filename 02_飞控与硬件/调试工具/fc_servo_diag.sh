@@ -3,7 +3,7 @@
 # 舵机不动诊断：
 # ① 解除会话级安全开关（MAV_CMD_DO_SET_SAFETY_SWITCH_STATE=1，§五同款）
 # ② 后台抓 /mavros/rc/out，看 PWM 指令期间飞控 SERVO9/10 通道是否真在变
-# 判读：rc_out 里 1100↔1900 有变化 = 飞控输出正常 → 问题在舵机侧电气
+# 判读：rc_out 里 1100↔1600 有变化 = 飞控输出正常 → 问题在舵机侧电气
 #       （BEC 5V / 共地 / S 针）；无变化 = 输出仍被门控，另有蹊跷
 # =============================================================================
 set -o pipefail
@@ -14,7 +14,7 @@ source /opt/ros/humble/setup.bash
 # shellcheck disable=SC1091
 source "$HOME/cuadc_ws/install/setup.bash"
 FCU="${FCU_URL:-/dev/cuadc-fc:115200}"
-STOW=1100; RELEASE=1900
+STOW=1100; RELEASE=1600  # 09-19 释放位拍板 1600
 MPID=""; PUMP=""; RPID=""
 
 ros2 daemon stop > /dev/null 2>&1 || true

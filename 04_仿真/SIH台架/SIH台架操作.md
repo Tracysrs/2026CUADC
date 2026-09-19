@@ -55,7 +55,7 @@ python check_fc.py       # 记录当前固件版本，作为恢复后的对照
 
 1. Jetson 起 mission 状态机 + 真值感知替身（契约 v1.3），或 MAVProxy 手动推进；
 2. 任务跑到 RELEASE：`SERVO_OUTPUT_RAW` 回读 SERVO9/10 应逐拍出现
-   1100（收拢）→1900（释放）时序——对照 `servo_test.py` 台架基线；
+   1100（收拢）→1600（释放）时序——对照 `servo_test.py` 台架基线；
 3. 全 18 态推进到 DONE 无卡死 = 主验收过。
 
 **档 B：+ 电机（SIM_OH_MASK=783，改参后重启）**

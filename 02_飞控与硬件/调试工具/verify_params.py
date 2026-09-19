@@ -4,6 +4,7 @@
   python verify_params.py --export            # 导出飞控全参数备份（时间戳文件名）
   python verify_params.py --diff 参数文件.param # 飞控实际值 vs 参数文件 逐项比对
   python verify_params.py --export --diff 设计/V6X_ardupilot_params.param  # 两者都做
+  COM 号漂移时用 --port 指定（默认 COM5）: python verify_params.py --port COM17 --export
 对应方案 §10.2-6「配置与代码一致性」检查；刷固件/导参数前先 --export 备份。
 """
 import argparse
@@ -20,8 +21,8 @@ QUIET_PERIOD = 2.0        # 流停顿多少秒后开始补拉缺失参数
 MAX_RETRY_ROUNDS = 30     # 按索引补拉的最大轮数
 
 
-def connect():
-    master = mavutil.mavlink_connection(PORT, baud=BAUD, timeout=5)
+def connect(port):
+    master = mavutil.mavlink_connection(port, baud=BAUD, timeout=5)
     hb = master.wait_heartbeat(timeout=15)
     if hb is None:
         print("ERROR: 未收到心跳，检查接线和串口")
@@ -100,12 +101,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--export", action="store_true", help="导出飞控全参数备份")
     ap.add_argument("--diff", metavar="PARAM_FILE", help="与参数文件逐项比对")
+    ap.add_argument("--port", default=PORT, help="COM 口（默认 COM5，号漂移时先扫端口）")
     args = ap.parse_args()
     if not (args.export or args.diff):
         ap.print_help()
         sys.exit(1)
 
-    master = connect()
+    master = connect(args.port)
     print("正在下载飞控全参数...")
     fc = download_all_params(master)
     master.close()

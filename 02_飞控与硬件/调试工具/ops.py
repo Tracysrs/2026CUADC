@@ -29,6 +29,7 @@ CMDS = {
     "prearm":        ("prearm_diag.py", "阶段0", "解锁前诊断：模式/RC/电池/EKF/罗盘一致性一次看全（只读）"),
     "params-diff":   ("verify_params.py", "阶段0/2", "参数一致性核对，用法: params-diff <参数文件>"),
     "params-export": ("verify_params.py", "阶段0", "参数全量备份到 02_飞控与硬件/参数备份/"),
+    "params-load":   ("load_params.py",  "阶段0", "参数文件导入（默认两遍+重启）: params-load [COM口] <参数文件>"),
     "read-params":   ("read_params.py", "阶段0", "读机架/串口等指定参数"),
     "lazy-params":   ("activate_lazy_params.py", "阶段0", "激活懒加载参数组并重启（4.7-beta 特性）"),
     # ---- 阶段 1/2：上电检查 ----

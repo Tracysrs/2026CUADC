@@ -1,0 +1,32 @@
+# 遥控链路标定（FS-i6 + FS-iA6B PPM）——自 2026-09-17 旧板全量备份 param_backup_20260917_144750 迁移
+# 依据：PWM 脉宽是遥控器/接收机侧属性，同一套遥控设备换飞控后照搬有效（2026-09-19 新板沿用）；
+#       若日后用 Mission Planner 重新做遥控校准，以新标定为准。
+# RC3_TRIM 按 ArduPilot 规范取 RC3_MIN（旧板备份误为 1999 校准残留，不照搬）；
+# RC_OPTIONS=32 = bit5「解锁要求油门在怠速位」（旧板沿用，安全项，含义查证 ardupilot.org RC Options 文档）；
+# CH5=飞行模式（SWA 三段 1100/1500/1900）、CH6=急停（SWC，RC6_OPTION=31 见基线文件 §3b）。
+RC_OPTIONS,32
+FLTMODE_CH,5
+RC1_MIN,1005
+RC1_MAX,1999
+RC1_TRIM,1504
+RC1_DZ,20
+RC2_MIN,999
+RC2_MAX,1999
+RC2_TRIM,1499
+RC2_DZ,20
+RC3_MIN,1005
+RC3_MAX,1999
+RC3_TRIM,1005
+RC3_DZ,30
+RC4_MIN,999
+RC4_MAX,1999
+RC4_TRIM,1500
+RC4_DZ,20
+RC5_MIN,1100
+RC5_MAX,1900
+RC5_TRIM,1500
+RC5_DZ,0
+RC6_MIN,1100
+RC6_MAX,1900
+RC6_TRIM,1500
+RC6_DZ,0

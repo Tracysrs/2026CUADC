@@ -4,7 +4,7 @@ import sys
 import time
 from pymavlink import mavutil
 
-PORT = "COM5"
+PORT = sys.argv[1] if len(sys.argv) > 1 else "COM5"   # COM 号漂移时命令行指定
 BAUD = 115200
 
 print(f"Connecting to {PORT} @ {BAUD} ...")

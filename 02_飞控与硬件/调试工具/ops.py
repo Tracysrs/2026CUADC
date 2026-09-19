@@ -47,6 +47,7 @@ CMDS = {
     "servo-test":    ("fc_servo_test.sh", "Jetson", "舵机投放时序（收1100/释1600）"),
     "servo-diag":    ("fc_servo_diag.sh", "Jetson", "舵机不动时诊断 /mavros/rc/out"),
     "log":           ("fc_log_pull.py", "Jetson", "拉 dataflash 日志: log list | log get 名字"),
+    "sync":          ("sync_jetson.py", "Jetson", "仓库→Jetson 一键同步+哈希核验（本机跑）: sync [push --yes] [关键词] | sync diff 关键词"),
 }
 
 MENU_ORDER = ["阶段0", "阶段0/2", "阶段2", "阶段3", "Jetson"]

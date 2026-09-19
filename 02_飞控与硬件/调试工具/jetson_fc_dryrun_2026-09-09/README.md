@@ -34,5 +34,5 @@
 | `cuadc_armtest_0909_153134/` | 解锁试跑·直接路径：`arm.txt`（CommandBool → success=False）/`statustext.txt`（**Arm: Need Position Estimate** + PreArm 全列）/`state_armed.txt`（armed: false）→ 恢复 ✅ |
 | `cuadc_00000012.BIN` | 飞控 SD 卡当日 dataflash 日志 134MB（电机测试 + 干跑 + 解锁试跑全程，LOG_DISARMED 连续记录），不入库仅本地 |
 
-关键结论见 `../../../07_工作日志/2026-09-09.md` §八/§九：无 GPS 时此固件无法解锁
+关键结论见 `99_归档/工作日志按日版_20260919/2026-09-09.md` §八/§九（按日原文已归档；总编见 `../../../07_工作日志/工作日志总编.md` 09-09 小节）：无 GPS 时此固件无法解锁
 （强制位置检查不可跳过），真解锁/全流程等 GPS（NEO-3）或 VIO。

@@ -108,11 +108,13 @@ RNGFND1_SCALING,1
 RNGFND1_GNDCLR,0.1
 
 # ---------- 6. 精准降落（Orin 发 LANDING_TARGET，飞控 PLND 模块执行） ----------
-# ⚠️ PLND_TYPE=0 是 CompanionComputer（收 MAVLink LANDING_TARGET）
-#    1 是 IR-LOCK 红外信标——不是我们的架构，勿改回 1（旧文件此处写错了）
-# 懒加载：PLND_ENABLED=1 写入并重启后，PLND_TYPE 等 PLND_* 参数才会出现 → 需第二遍导入
+# ⚠️ 2026-09-14 勘误后口径：PLND_TYPE 0=Never / 1=CompanionComputer(MAVLink 收
+#    LANDING_TARGET) / 2=IRLOCK——本项目用 1（与 SSOT §4.5 一致）
+# 注意：飞控实机可能仍残留旧值 0（09-05 旧认知写入），下次连机 verify_params --diff
+#    会报不一致，按本行写入 1 并回读；懒加载：PLND_ENABLED=1 写入并重启后 PLND_*
+#    才出现在参数表 → 需第二遍导入
 PLND_ENABLED,1
-PLND_TYPE,0
+PLND_TYPE,1
 
 # ---------- 7. 投放舵机（对应 PX4 AUX 输出） ----------
 # V6X 带 IOMCU：AUX1/AUX2 口对应 SERVO9/SERVO10 参数（MAIN1/2 则是 SERVO1/2）

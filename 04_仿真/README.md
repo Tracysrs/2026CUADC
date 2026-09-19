@@ -10,4 +10,4 @@
 | `仿真环境/cuadc_rescue_sim/` | Gazebo 救援仿真环境（规则场地 + 随机场景生成；README / SETUP / CONFIGURATION / RULE_MAPPING；`models/` 第三方资产不入库） |
 | `仿真环境/jetson/操作手册.md` | Jetson 上跑仿真环境的操作手册 |
 
-SIH 固件的 Jetson 编译脚本 `sih_jetson_build.sh` 在 [`../02_飞控与硬件/调试工具/`](../02_飞控与硬件/README.md)；日常仿真三条命令与代码 SITL 联跑见 [`../06_使用说明书/03_操作模块.md`](../06_使用说明书/03_操作模块.md) §5 与 [`../03_机载软件/README.md`](../03_机载软件/README.md)。
+SIH 固件的 Jetson 编译脚本 `sih_jetson_build.sh` 在 [`../02_飞控与硬件/调试工具/`](../02_飞控与硬件/README.md)；日常仿真四步流程与代码 SITL 联跑见 [`../06_使用说明书/07_仿真操作.md`](../06_使用说明书/07_仿真操作.md) §3 与 [`../03_机载软件/README.md`](../03_机载软件/README.md)。

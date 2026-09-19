@@ -11,5 +11,6 @@
 | `调试工具/README.md` | 飞控调试脚本：`ops.py` 统一入口 + check_fc / check_gps / prearm_diag / site_geo_check / rtk_setup / check_radio / verify_params / motor_test / servo_test / fc_* 全套；SIH 固件 Jetson 编译脚本 `sih_jetson_build.sh` 也在此 |
 | `设备参数/RTK-01.md` | 瑞杰 RTK-01-R 规格与 6P 针序勘误（**FC k 针 → rover k+1 针循环移位，严禁 1:1 直通**） |
 | `设备参数/ZD550.md` | 整机（ZD550 机架）设备参数调查报告 |
+| `飞行日志/` | 飞控 dataflash 回拉日志存放处（`.BIN` 本地不入库）+ **架次台账**（README 内，每次回拉登记一行；命名 `YYYY-MM-DD_架次NN_目的.bin`，2026-09-19 建） |
 
-针级接线总图见 [`../06_使用说明书/09_接线图.md`](../06_使用说明书/09_接线图.md)；SIH 台架仿真（计划/操作/参数）在 [`../04_仿真/SIH台架/`](../04_仿真/README.md)。
+针级接线（各座总表+逐座接线卡）见 [`../06_使用说明书/02_装机接线.md`](../06_使用说明书/02_装机接线.md)；SIH 台架仿真（计划/操作/参数）在 [`../04_仿真/SIH台架/`](../04_仿真/README.md)。

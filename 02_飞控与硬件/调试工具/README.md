@@ -24,6 +24,8 @@
 | `fc_servo_diag.sh` | **在 Jetson 上跑**：舵机不动时的诊断——解会话安全锁 + 抓 `/mavros/rc/out` 看飞控输出通道是否真在变值（区分"指令没到"与"舵机没电"） |
 | `servo_test.py` | 舵机逐通道测试（本机，ops.py `servo` 命令入口）：现场改 FUNCTION=0 的通道逐个出 PWM；测完可用 `params-diff` 核对恢复情况 |
 | `servo_position.py` | 舵机定位保持（本机）：把 AUX 舵机打到指定 PWM（默认 COM5、SERVO9,10、1100 收拢）并每 5s 重发持续保持，供装盘/装爪相位定位（09-19 新增）；流程=带电 1100 定位→装舵机盘→换齿位微调，不动 PWM 口径；Ctrl-C/杀进程即停 |
+| `bench_logger.py` | 台架联测电压记录仪（**Jetson 上跑**）：10Hz 记录电压/油门/急停/解锁态到 `/tmp/cuadc_bench*.csv`（600s 窗口）；注意与投放脚本**不可同跑**（同读串口互抢） |
+| `bench_drop.py` | 台架联测投放执行（**Jetson 上跑**，单进程独占串口）：等待解锁→怠速稳定 2s→自动释放/回仓，电压与事件打点进 CSV：`python3 bench_drop.py <通道> <释放PWM> <收拢PWM> <保持秒> <标签>` |
 | `sih_jetson_build.sh` | **在 Jetson 上跑**：SIH 台架固件一键原生编译（xpack 工具链 + 子模块离线部署），产物归档 `../firmware/`；编译坑实录见 2026-09-16 日志会话三 |
 
 SIH 台架在环仿真（计划 / 操作手册 / V6X_SIH_bench.param）在 [../../04_仿真/SIH台架/](../../04_仿真/SIH台架/SIH台架操作.md)。

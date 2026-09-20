@@ -42,9 +42,12 @@
 #include <cmath>
 #include <cstdint>
 #include <deque>
+#include <fstream>
 #include <functional>
+#include <iomanip>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -64,6 +67,7 @@
 #include <std_srvs/srv/trigger.hpp>
 
 #include "cuadc_mission/drop_logic.hpp"
+#include "cuadc_mission/odom_interp.hpp"
 #include "cuadc_mission/route_logic.hpp"
 
 using namespace std::chrono_literals;
@@ -94,14 +98,9 @@ struct Segment
   double duration_s = 1.0;
 };
 
-/// odom 历史样本：把视觉帧（带取帧时刻）夹逼/插值到取帧瞬间的位姿（P0.4，
-/// 见 10_机载代码/时间同步设计.md；M2 的视觉-世界换算必须经过它）
-struct OdomSample
-{
-  rclcpp::Time stamp;
-  Point3 position;
-  double yaw = 0.0;
-};
+// odom 历史样本 = cuadc_odom::Sample（odom_interp.hpp 纯函数；P0.4 判定核心
+// 09-20 自本文件 interpolate_odom() 抽出，时间域等号/大间隔/回跳由
+// test_odom_interp 双端锁死；见 10_机载代码/时间同步设计.md）
 
 /// 角度归一化到 (-pi, pi]
 double normalize_angle(double x)
@@ -348,6 +347,10 @@ private:
     // 虚拟判定节点按调用瞬间位置判 A/B 区；真机必须 false）
     declare_parameter<bool>("sim_release_bridge", false);
 
+    // ---- A4 事件流（RELEASE 证据 JSONL 追加落盘；空=禁用）----
+    // 记录 aim 冻结/fire 指令/舵机结果/payload 完成/弃桶——赛后归因证据链
+    declare_parameter<std::string>("event_log_path", "");
+
     // ---- 时间同步（P0.4，SSOT §4.3 容差照抄）----
     declare_parameter<double>("perception_max_delay_s", 1.5);   // 感知管线延迟上界
     declare_parameter<double>("odom_future_tol_s", 0.05);       // 未来戳容差
@@ -487,6 +490,7 @@ private:
     }
 
     sim_release_bridge_ = get_parameter("sim_release_bridge").as_bool();
+    event_log_path_ = get_parameter("event_log_path").as_string();
     if (sim_release_bridge_) {
       RCLCPP_WARN(get_logger(),
         "sim_release_bridge=true：fire 同步调 /drop_controller/release（仅仿真判分）");
@@ -498,6 +502,9 @@ private:
     odom_interp_max_gap_s_ = std::max(
       0.05, get_parameter("odom_interp_max_gap_s").as_double());
     odom_history_span_s_ = std::max(1.0, get_parameter("odom_history_span_s").as_double());
+    interp_params_.future_tol_s = odom_future_tol_s_;
+    interp_params_.max_delay_s = perception_max_delay_s_;
+    interp_params_.max_gap_s = odom_interp_max_gap_s_;
 
     // ---- M3 契约 ----
     expected_frame_id_ = get_parameter("expected_frame_id").as_string();
@@ -625,6 +632,26 @@ private:
     }
   }
 
+  /// A4 事件流：RELEASE 关键证据 JSONL 追加落盘（event_log_path 空=禁用）。
+  /// fields 须为合法 JSON 字段串（值来自内部枚举/数值，无引号转义需求）。
+  /// 打开失败静默跳过——证据链是尽力而为，绝不影响任务主链。
+  void append_event(const std::string & event, const std::string & fields)
+  {
+    if (event_log_path_.empty()) {
+      return;
+    }
+    std::ofstream f(event_log_path_, std::ios::app);
+    if (!f.is_open()) {
+      return;
+    }
+    f << "{\"t\":" << std::fixed << std::setprecision(3) << now().seconds()
+      << ",\"state\":\"" << state_name(state_) << "\",\"event\":\"" << event << "\"";
+    if (!fields.empty()) {
+      f << ',' << fields;
+    }
+    f << "}\n";
+  }
+
   // ===========================================================================
   // 数据回调：数据一到就更新成员变量，供 tick() 随时查询
   // ===========================================================================
@@ -652,19 +679,20 @@ private:
     have_odom_ = true;
     last_odom_time_ = now();
 
-    // P0.4：维护 odom 历史供视觉帧时间插值（M2 消费，见 时间同步设计.md）
-    OdomSample sample;
-    // 统一换成节点时钟类型再比较/相减，避免 rclcpp::Time 因时钟类型不同抛异常
-    sample.stamp = rclcpp::Time(msg->header.stamp, get_clock()->get_clock_type());
-    sample.position = position_;
+    // P0.4：维护 odom 历史供视觉帧时间插值（M2 消费；判定核心在 odom_interp.hpp）
+    cuadc_odom::Sample sample;
+    // 统一换成节点时钟类型再取秒，避免 rclcpp::Time 因时钟类型不同抛异常
+    sample.t = rclcpp::Time(msg->header.stamp, get_clock()->get_clock_type()).seconds();
+    sample.x = position_.x;
+    sample.y = position_.y;
+    sample.z = position_.z;
     const auto & q = msg->pose.pose.orientation;
     sample.yaw = std::atan2(
       2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
     odom_history_.push_back(sample);
     // 双重裁剪：按时间窗裁 + 硬上限兜底（防时间戳异常时不收敛）
-    const rclcpp::Time cutoff =
-      sample.stamp - rclcpp::Duration::from_seconds(odom_history_span_s_);
-    while (!odom_history_.empty() && odom_history_.front().stamp < cutoff) {
+    const double cutoff = sample.t - odom_history_span_s_;
+    while (!odom_history_.empty() && odom_history_.front().t < cutoff) {
       odom_history_.pop_front();
     }
     constexpr std::size_t kMaxOdomHistory = 600U;
@@ -740,8 +768,10 @@ private:
     }
     latest_detections_.clear();
     for (const auto & p : msg->poses) {
-      if (p.orientation.y < min_detection_confidence_) {
-        continue;
+      if (!std::isfinite(p.orientation.y) ||
+        p.orientation.y < min_detection_confidence_)
+      {
+        continue;    // 置信度非有限/低于门限：跳过该 pose（A5 小扫除补 isfinite）
       }
       if (!std::isfinite(p.position.x) || !std::isfinite(p.position.y) ||
         !std::isfinite(p.position.z) || !std::isfinite(p.orientation.x))
@@ -794,59 +824,27 @@ private:
   }
 
   /// P0.4：把时间戳 t 夹逼/插值到 odom 历史上的位姿（SSOT §4.3 容差参数照抄）。
-  /// 返回 nullopt 的三种情况：帧太旧（超感知管线延迟上界）/ 未来戳超容差 /
-  /// 包围两帧间隔过大（odom 断流）。拒绝即丢弃该帧，绝不外推。
-  std::optional<OdomSample> interpolate_odom(const rclcpp::Time & t) const
+  /// 判定核心收敛 odom_interp.hpp 纯函数（09-20 自本函数抽出，行为逐分支保持，
+  /// 等号/大间隔/回跳由 test_odom_interp 双端锁死）；拒绝即丢弃，绝不外推。
+  std::optional<cuadc_odom::Sample> interpolate_odom(const rclcpp::Time & t) const
   {
-    if (odom_history_.empty()) {
+    const auto r = cuadc_odom::interpolate(odom_history_, t.seconds(), interp_params_);
+    if (r.status != cuadc_odom::InterpStatus::kOk) {
       return std::nullopt;
     }
-    const OdomSample & newest = odom_history_.back();
-    const OdomSample & oldest = odom_history_.front();
-    if ((t - newest.stamp).seconds() > odom_future_tol_s_) {
-      return std::nullopt;  // 未来戳超容差
-    }
-    if ((newest.stamp - t).seconds() > perception_max_delay_s_) {
-      return std::nullopt;  // 帧太旧
-    }
-    if (t >= newest.stamp) {
-      return newest;  // 夹逼上界（延迟小于一拍）
-    }
-    if (t <= oldest.stamp) {
-      return oldest;  // 夹逼下界
-    }
-    for (auto it = odom_history_.begin(); it + 1 != odom_history_.end(); ++it) {
-      const OdomSample & a = *it;
-      const OdomSample & b = *(it + 1);
-      if (t >= a.stamp && t <= b.stamp) {
-        const double gap = (b.stamp - a.stamp).seconds();
-        if (gap > odom_interp_max_gap_s_) {
-          return std::nullopt;  // 断流段内不插值
-        }
-        const double r = (t - a.stamp).seconds() / std::max(1e-6, gap);
-        const double dyaw = normalize_angle(b.yaw - a.yaw);
-        return OdomSample{
-          t,
-          Point3{
-            a.position.x + r * (b.position.x - a.position.x),
-            a.position.y + r * (b.position.y - a.position.y),
-            a.position.z + r * (b.position.z - a.position.z)},
-          normalize_angle(a.yaw + r * dyaw)};
-      }
-    }
-    return std::nullopt;
+    return r.out;
   }
 
   /// 把机体系目标（x前 y左 z上）按"取帧瞬间"的位姿换算到本地 ENU（M2 消费）。
   /// 相机-机体外参与投放口偏置在 M3 标定后叠加，本函数只做插值位姿的旋转平移。
-  Point3 body_to_local_at(const OdomSample & ref, const Point3 & body) const
+  Point3 body_to_local_at(const cuadc_odom::Sample & ref, const Point3 & body) const
   {
     const double c = std::cos(ref.yaw);
     const double s = std::sin(ref.yaw);
     return Point3{
-      ref.position.x + c * body.x - s * body.y,
-      ref.position.y + s * body.x + c * body.y,
-      ref.position.z + body.z};
+      ref.x + c * body.x - s * body.y,
+      ref.y + s * body.x + c * body.y,
+      ref.z + body.z};
   }
 
   /// 锁定任务坐标系。注意 EKF origin ≠ 起飞点，任务原点必须取起飞瞬间 odom
@@ -904,10 +902,6 @@ private:
   {
     check_service_results();
     service_pending_servo();
-    // 伺服激活拍停发位置 setpoint（改发速度），避免两路 setpoint 交叠打架
-    if (publish_setpoint_enabled_ && frame_locked_ && !servo_active_) {
-      publish_setpoint();
-    }
 
     // 任务总超时看门狗（SSOT §5.4：240s，比赛 5 分钟）；
     // 一旦进入返航/降落段不再受它约束，让飞机安全回家
@@ -1129,6 +1123,15 @@ private:
         }
         break;
     }
+
+    // A1-4：位置 setpoint 移到状态推进之后发布——本轮更新的目标当拍出，
+    // 消除旧实现"先发旧目标、下拍才发新目标"的 50ms 滞后（11 册 §13.1）。
+    // 伺服激活拍停发位置 setpoint（改发速度），避免两路 setpoint 交叠打架。
+    // DONE/PILOT_OVERRIDE/ABORT 三个会 shutdown 的态都先停发，不会向已关闭
+    // 的上下文发布。
+    if (publish_setpoint_enabled_ && frame_locked_ && !servo_active_) {
+      publish_setpoint();
+    }
   }
 
   // ===========================================================================
@@ -1287,6 +1290,14 @@ private:
     target_ = aim_point_;                          // 冻结飞机位置（SSOT §5.2）
     RCLCPP_INFO(get_logger(), "瞄准点冻结 (%.2f, %.2f)，进入释放门控",
       aim_point_.x, aim_point_.y);
+    {
+      std::ostringstream f;
+      f << std::fixed << std::setprecision(3)
+        << "\"payload\":" << payload_index_
+        << ",\"tid\":" << tracker_->target->tid
+        << ",\"ax\":" << aim_point_.x << ",\"ay\":" << aim_point_.y;
+      append_event("aim_frozen", f.str());
+    }
     enter(State::RELEASE);
   }
 
@@ -1303,6 +1314,14 @@ private:
     if (enable_release_output_) {
       servo_release_pending_ = true;
       servo_cmd_deadline_ = now() + rclcpp::Duration::from_seconds(2.0);
+    }
+    {
+      std::ostringstream f;
+      f << "\"payload\":" << payload_index_
+        << ",\"ch\":" << servo_channel_[payload_index_]
+        << ",\"pwm\":" << servo_release_pwm_
+        << ",\"dry_run\":" << (enable_release_output_ ? "false" : "true");
+      append_event("fire", f.str());
     }
     if (sim_release_bridge_) {
       request_sim_release();   // 仿真判分：虚拟判定节点按此刻位置判 A/B 区
@@ -1367,14 +1386,15 @@ private:
         servo_stow_pending_ = true;
         servo_stow_channel_ = servo_channel_[payload_index_];   // 回仓逐拍重试
       }
-      if (servo_fire_unknown_) {
+      const bool fire_unknown = servo_fire_unknown_;
+      if (fire_unknown) {
         ++payload_result_unknown_;
         RCLCPP_WARN(get_logger(),
           "载荷 %zu fire 结果超时未知，计数按已投推进并打标（累计未知 %d）",
           payload_index_, payload_result_unknown_);
         servo_fire_unknown_ = false;
       }
-      finish_payload(t);
+      finish_payload(t, fire_unknown);
       return;
     }
     if (verdict.status == cuadc_drop::GateStatus::kAbort) {
@@ -1391,14 +1411,18 @@ private:
       bucket_map_.blacklist(
         tracker_->target->frozen_x, tracker_->target->frozen_y, t);
     }
+    append_event("bucket_abandoned",
+      "\"tid\":" + std::to_string(tracker_ ? tracker_->target->tid : -1));
     advance_payload_or_finish();
   }
 
-  void finish_payload(double t)
+  void finish_payload(double t, bool fire_unknown)
   {
     ++payloads_released_;
     RCLCPP_INFO(get_logger(), "载荷 %zu 投放完成（累计 %d/%d）",
       payload_index_, payloads_released_, kNPayloads);
+    append_event("payload_done", "\"count\":" + std::to_string(payloads_released_) +
+      ",\"result_unknown\":" + (fire_unknown ? "true" : "false"));
     if (tracker_) {
       bucket_map_.blacklist(
         tracker_->target->frozen_x, tracker_->target->frozen_y, t);
@@ -1812,6 +1836,7 @@ private:
         // 推进但在 kStow 处打标（payload_result_unknown_）
         servo_cmd_is_fire_ = false;
         servo_fire_unknown_ = true;
+        append_event("servo_result", "\"result\":\"timeout\"");
         RCLCPP_WARN(get_logger(),
           "舵机 fire 指令 %.1fs 无 ACK：结果未知，计数按已投推进并打标",
           kServiceTimeoutS);
@@ -1827,6 +1852,7 @@ private:
       if (res->success) {
         if (was_fire) {
           servo_reject_streak_ = 0;    // fire 被接受：连击清零
+          append_event("servo_result", "\"result\":\"accepted\"");
         }
       } else if (was_fire) {
         ++servo_reject_streak_;
@@ -1836,6 +1862,8 @@ private:
           RCLCPP_ERROR(get_logger(),
             "舵机 fire 指令被 FCU 拒绝（连续第 %d 次）：瓶未脱，已回退重投"
             "（计数不推进）", servo_reject_streak_);
+          append_event("servo_result",
+            "\"result\":\"rejected\",\"streak\":" + std::to_string(servo_reject_streak_));
           if (servo_reject_streak_ >= 3) {
             fail_and_return("Servo fire command rejected 3 times by FCU");
             return;
@@ -2010,7 +2038,8 @@ private:
   std::vector<Point3> search_route_;
   std::vector<Point3> recon_route_;
   std::vector<std::uint32_t> recon_acks_;
-  std::deque<OdomSample> odom_history_;
+  std::deque<cuadc_odom::Sample> odom_history_;
+  cuadc_odom::InterpParams interp_params_;   ///< P0.4 判定参数（odom_interp.hpp）
   std::optional<rclcpp::Time> landing_stable_since_;
   std::optional<rclcpp::Time> heading_lock_since_;
 
@@ -2086,6 +2115,7 @@ private:
   double align_servo_deadzone_m_ = 0.02;
   double align_servo_watchdog_s_ = 0.5;
   bool sim_release_bridge_ = false;
+  std::string event_log_path_;   ///< A4：RELEASE 证据 JSONL 路径（空=禁用）
   std::pair<double, double> payload_offset_xy_[2] = {{0.0, 0.0}, {0.0, 0.0}};
   int servo_channel_[2] = {9, 10};
   double servo_stowed_pwm_ = 1100.0;

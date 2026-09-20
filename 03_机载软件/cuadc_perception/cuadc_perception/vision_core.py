@@ -339,6 +339,8 @@ def hough_h_detect(bgr: np.ndarray, fx: float, h_m: float,
             score = h_pattern_score(gray, float(u), float(v), float(r))
             if score < params.h_score_min:
                 continue
+        # 下限 0.55 保底：hough 候选不被消费端 min_conf 过滤（判别力靠
+        # h_score_min 门与融合打折），该值勿当精度使用（11 册 §13.1 小扫除）
         out.append(PixelDet(u=float(u), v=float(v), a_px=2.0 * float(r),
                             b_px=2.0 * float(r),
                             conf=max(0.55, 0.55 * score + 0.40),
@@ -613,7 +615,3 @@ def decode_jpeg(data: bytes) -> np.ndarray:
     if img is None:
         raise ValueError('JPEG 解码失败（截断帧？）')
     return img
-
-
-def clamp_conf(c: float, lo: float = 0.0, hi: float = 0.98) -> float:
-    return max(lo, min(hi, float(c)))

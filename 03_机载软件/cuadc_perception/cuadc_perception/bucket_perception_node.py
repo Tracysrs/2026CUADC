@@ -17,6 +17,7 @@
 **不确认**；连续帧确认/EMA/排名稳定/拉黑全部在 mission_node BucketMap。
 """
 
+import json
 import os
 import threading
 import time
@@ -107,6 +108,9 @@ class BucketPerceptionNode(Node):
         # ---- 运行控制 ----
         self.declare_parameter('active_states', '')   # 空=全态处理；如 'SEARCH,ALIGN'
         self.declare_parameter('debug_save_period', 0)
+        # A5-1：健康诊断话题（1Hz JSON 计数）——空帧（正常）与故障可区分的观测
+        # 面；契约 PoseArray 本体不变（additive，消费端可选订阅）
+        self.declare_parameter('health_topic', '/perception/drop_buckets_health')
 
         self.frame_id = gp('frame_id').value
         self.version = float(gp('contract_version').value)
@@ -173,6 +177,8 @@ class BucketPerceptionNode(Node):
         self.bucket_pub = self.create_publisher(
             PoseArray, gp('bucket_topic').value, qos)
         self.hb_pub = self.create_publisher(Header, gp('heartbeat_topic').value, qos)
+        self.health_pub = self.create_publisher(String, gp('health_topic').value, 10)
+        self.create_timer(1.0, self._publish_health)
         self.create_subscription(Odometry, gp('odom_topic').value, self.on_odom, qos)
         self.create_subscription(String, gp('mission_state_topic').value,
                                  self.on_state, 10)
@@ -189,6 +195,8 @@ class BucketPerceptionNode(Node):
         self.frame_count = 0
         self.detect_count = 0
         self.reject_diam_count = 0
+        self.reject_odom_count = 0
+        self.exception_count = 0
         self.last_report = time.time()
         self.get_logger().info(
             f'白桶感知就绪: 通道={"seg+LAB" if self.model else "LAB-only(主通道未就绪)"}, '
@@ -269,6 +277,7 @@ class BucketPerceptionNode(Node):
         try:
             self._process(msg)
         except Exception as e:  # noqa: BLE001 —— 单帧异常不丢节点（fail-closed 心跳照发）
+            self.exception_count += 1
             self.get_logger().error(f'帧处理异常: {e}')
             self._publish([], _stamp_to_sec(msg.header.stamp))
 
@@ -301,6 +310,7 @@ class BucketPerceptionNode(Node):
 
         oz = self._odom_z_at(t_frame)
         if oz is None:
+            self.reject_odom_count += 1
             self.get_logger().warn(
                 '取帧时刻无可用 odom 高度（太旧/断流/时钟域不一致），本帧发空检测',
                 throttle_duration_sec=5.0)
@@ -396,6 +406,22 @@ class BucketPerceptionNode(Node):
         hb.stamp = self._sec_to_stamp(t_frame)
         hb.frame_id = self.get_name()
         self.hb_pub.publish(hb)
+
+    def _publish_health(self):
+        """A5-1：1Hz 健康 JSON——空帧（正常）与故障可区分：reject_odom 激增=
+        odom 断流/时钟域异常，exceptions 激增=链路故障；空检测帧本身不计数。"""
+        msg = String()
+        msg.data = json.dumps({
+            'node': self.get_name(),
+            'mode': 'seg+LAB' if self.model else 'LAB-only',
+            'state': self.current_state,
+            'frames': self.frame_count,
+            'detect_frames': self.detect_count,
+            'reject_diam': self.reject_diam_count,
+            'reject_odom': self.reject_odom_count,
+            'exceptions': self.exception_count,
+        })
+        self.health_pub.publish(msg)
 
     @staticmethod
     def _sec_to_stamp(t_sec: float):

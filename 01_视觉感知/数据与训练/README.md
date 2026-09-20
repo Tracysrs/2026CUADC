@@ -16,6 +16,7 @@
 | `real_data/` + `real_data.zip` | 切分好的训练集（约 244MB） | 按视频片段切分 train/val（防连续帧泄漏）；**data.yaml/标签为旧表，被 deliver_v2 重映射版取代** |
 | `build_real_data.py` | 数据集构建脚本 | 切分逻辑复现用；类别表已勘正为附件11 实表，**重跑前必须先重映射 train/ 标签**（见脚本头部警告） |
 | `v2训练流水线/` | 云端训练全套（约 547MB） | `AutoDL租卡训练指南v2.md`（操作手册）+ `run_v2_training.sh`（一键训练，内含 v1 自动兜底）+ `hazard_labels_v2_11class*`（v1 合成数据包 2220 张/11 类）。**⚠️ v1→v2 微调链停用**（旧类别表），现行路线 = COCO 预训练直训（SSOT §8.2）；指南留作租卡操作参考 |
+| `dataset_audit.py` + `test_dataset_audit.py` | 数据集审计器（09-20，SSOT §15-B4） | 审计 YOLO 标签：类别越界/坐标越界/零面积/NaN/seg 点数/图片标签互缺/精确重复图片（md5）/manifest session 泄漏；**只报告不自动改标签**；非零退出码可接 CI。`python dataset_audit.py --images real_data/images/train --labels real_data/labels/train --classes 11`；单测 `python -m unittest test_dataset_audit -v` |
 
 ## 怎么用
 

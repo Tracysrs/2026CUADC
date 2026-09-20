@@ -456,6 +456,25 @@ class DropSequencer:
             return 'stow'
         return None
 
+    def is_idle(self) -> bool:
+        return self.phase == 'IDLE'
+
+    def hold_elapsed(self, t: float) -> bool:
+        """fire 后 0.7s 保持窗是否已到（A4-1：fire 结果未回时调用方据此暂缓
+        stow/finish，先收 ACK 再决定计数或回退——"拒绝也计数"的防线之一）。"""
+        return self.phase == 'RELEASED' and self.fire_t is not None \
+            and t - self.fire_t >= self.HOLD_S
+
+    def abort_fire(self) -> bool:
+        """A4-1：fire 指令被 FCU 明确拒绝——瓶未脱，回退 IDLE 允许重投。
+        RELEASED/STOWED 均可回退（STOWED 只表示 0.7s 计时到，不代表指令被
+        执行）；IDLE 返回 False。回退后 fire(t) 可再次调用。"""
+        if self.phase == 'IDLE':
+            return False
+        self.phase = 'IDLE'
+        self.fire_t = None
+        return True
+
 
 # ===========================================================================
 # 瞄准点解算（冻结 + 标定偏置 + 弹道前移）

@@ -285,6 +285,31 @@ class TestSequencerAndAim(unittest.TestCase):
         self.assertEqual(s.tick(0.7), 'stow')          # 0.7s 后回仓，恰好一次
         self.assertIsNone(s.tick(0.8))
 
+    def test_reject_rollback_and_refire(self):
+        """A4-1：fire 被 FCU 拒绝 → abort_fire 回退 → 重投不受单发保护阻挡；
+        回退后 tick 不再产 stow；IDLE 时 abort 是无害空操作。"""
+        s = DropSequencer()
+        self.assertTrue(s.fire(0.0))                   # RELEASED
+        self.assertTrue(s.abort_fire())                # 拒绝回退 → IDLE
+        self.assertTrue(s.is_idle())
+        self.assertIsNone(s.tick(0.8))                 # 回退后 0.7s 窗作废
+        self.assertFalse(s.abort_fire())               # IDLE：无可回退
+        self.assertTrue(s.fire(1.0))                   # 重投 → RELEASED
+        self.assertEqual(s.tick(1.7), 'stow')          # → STOWED
+        self.assertFalse(s.fire(1.8))                  # STOWED 后不可再 fire
+        self.assertTrue(s.abort_fire())                # STOWED 防御性回退 → IDLE
+        self.assertTrue(s.fire(1.9))                   # 回退后可再 fire（语义自洽）
+
+    def test_hold_elapsed_gates_stow(self):
+        """hold_elapsed 只在 RELEASED 且 0.7s 到时为真——mission 端据此暂缓
+        stow 等 ACK，避免"拒绝也计数"。"""
+        s = DropSequencer()
+        s.fire(0.0)
+        self.assertFalse(s.hold_elapsed(0.69))
+        self.assertTrue(s.hold_elapsed(0.70))
+        self.assertEqual(s.tick(0.70), 'stow')
+        self.assertFalse(s.hold_elapsed(0.80))         # STOWED 后恒假
+
     def test_ballistic_lead(self):
         lx, ly = ballistic_lead(0.0, 0.0, 1.8)
         self.assertAlmostEqual(math.hypot(lx, ly), 0.0)

@@ -371,6 +371,27 @@ static void test_sequencer_and_aim()
     CHECK(s.tick(0.7) == SeqResult::kStow);    // 0.7s 后回仓，恰好一次
     CHECK(s.tick(0.8) == SeqResult::kNone);
   }
+  {   // A4-1：拒绝回退 → 重投不受单发保护阻挡；回退后 tick 不再产 stow
+    DropSequencer s;
+    CHECK(s.fire(0.0));                        // RELEASED
+    CHECK(s.abort_fire());                     // 拒绝回退 → IDLE
+    CHECK(s.is_idle());
+    CHECK(s.tick(0.8) == SeqResult::kNone);    // 回退后 0.7s 窗作废
+    CHECK(!s.abort_fire());                    // IDLE：无可回退
+    CHECK(s.fire(1.0));                        // 重投 → RELEASED
+    CHECK(s.tick(1.7) == SeqResult::kStow);    // → STOWED
+    CHECK(!s.fire(1.8));                       // STOWED 后不可再 fire
+    CHECK(s.abort_fire());                     // STOWED 防御性回退 → IDLE
+    CHECK(s.fire(1.9));                        // 回退后可再 fire（语义自洽）
+  }
+  {   // hold_elapsed 只在 RELEASED 且 0.7s 到时为真（暂缓 stow 等 ACK）
+    DropSequencer s;
+    s.fire(0.0);
+    CHECK(!s.hold_elapsed(0.69));
+    CHECK(s.hold_elapsed(0.70));
+    CHECK(s.tick(0.70) == SeqResult::kStow);
+    CHECK(!s.hold_elapsed(0.80));              // STOWED 后恒假
+  }
   {   // 瞄准点 = 冻结估计 + 偏置旋转（yaw=0 → 前向偏置 → +x）
     FrozenTarget tg;
     tg.working_x = 10.0;

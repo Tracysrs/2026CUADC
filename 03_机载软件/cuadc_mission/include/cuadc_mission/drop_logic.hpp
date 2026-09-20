@@ -630,6 +630,26 @@ public:
 
   bool is_idle() const {return phase_ == Phase::kIdle;}
 
+  /// fire 后 0.7s 保持窗是否已到（A4-1：fire 结果未回时调用方据此暂缓
+  /// kStow/finish，先收 ACK 再决定计数或回退——"拒绝也计数"的防线之一）。
+  bool hold_elapsed(double t) const
+  {
+    return phase_ == Phase::kReleased && t - fire_t_ >= kHoldS;
+  }
+
+  /// A4-1：fire 指令被 FCU 明确拒绝——瓶未脱，回退到 IDLE 允许重投。
+  /// kReleased/kStowed 两相位均可回退（kStowed 只表示 0.7s 计时到，不代表
+  /// 指令被执行）；IDLE 返回 false。回退后 fire(t) 可再次调用。
+  bool abort_fire()
+  {
+    if (phase_ == Phase::kIdle) {
+      return false;
+    }
+    phase_ = Phase::kIdle;
+    fire_t_ = 0.0;
+    return true;
+  }
+
 private:
   enum class Phase { kIdle, kReleased, kStowed };
   Phase phase_ = Phase::kIdle;

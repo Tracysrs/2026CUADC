@@ -74,6 +74,8 @@ namespace
 constexpr double kPi = 3.14159265358979323846;
 constexpr const char * kMissionVersion = "cuadc-m3-2026-09b";
 constexpr int kNPayloads = 2;  ///< SSOT：两瓶（1 号筒 + 2 号筒）
+/// A1-1：服务 ACK 超时（到点清理客户端 pending；清理≠撤销远端动作，结果=未知）
+constexpr double kServiceTimeoutS = 2.0;
 
 /// 三维点（本地 ENU 坐标系，米；z 向上，相对上电原点）
 struct Point3
@@ -207,6 +209,7 @@ public:
   {
     declare_parameters();
     load_parameters();
+    log_effective_config();
 
     // ---- 订阅：飞控状态 / 定位 / 罗盘 / 姿态 / 速度 / 侦察确认 / 感知检测 ----
     state_sub_ = create_subscription<mavros_msgs::msg::State>(
@@ -591,6 +594,35 @@ private:
       return {0.0, 0.0};
     }
     return {v[0], v[1]};
+  }
+
+  /// A3：启动打印"生效配置"全量 + 指纹（SSOT §10.2-6 防 YAML 与代码脱节；
+  /// Re0/ROS §21.5 effective configuration 的落地）。指纹 = 排序后"名=值"行
+  /// 的 FNV-1a 64（无依赖实现；用途=跨次启动漂移比对，非安全哈希）。
+  void log_effective_config()
+  {
+    const auto list = get_node_parameters_interface()->list_parameters({}, 16);
+    std::vector<std::string> lines;
+    lines.reserve(list.names.size());
+    for (const auto & name : list.names) {
+      rclcpp::Parameter p;
+      if (get_parameter(name, p)) {
+        lines.push_back(name + "=" + p.value_to_string());
+      }
+    }
+    std::sort(lines.begin(), lines.end());
+    std::uint64_t h = 1469598103934665603ULL;
+    for (const auto & line : lines) {
+      for (const char c : line) {
+        h ^= static_cast<std::uint8_t>(c);
+        h *= 1099511628211ULL;
+      }
+    }
+    RCLCPP_INFO(get_logger(), "生效配置 %zu 项，指纹=%016llX（FNV-1a64，漂移比对用）",
+      lines.size(), static_cast<unsigned long long>(h));
+    for (const auto & line : lines) {
+      RCLCPP_INFO(get_logger(), "  cfg %s", line.c_str());
+    }
   }
 
   // ===========================================================================
@@ -1067,6 +1099,9 @@ private:
           std::string summary = "任务结束: 投放 " + std::to_string(payloads_released_) +
             "/" + std::to_string(kNPayloads) +
             ", 拍照确认数=" + std::to_string(recon_acks_.size());
+          if (payload_result_unknown_ > 0) {
+            summary += ", fire结果未知 " + std::to_string(payload_result_unknown_);
+          }
           if (mission_failed_) {
             summary += " | 失败原因: " + terminal_reason_;
           }
@@ -1163,6 +1198,9 @@ private:
   {
     const auto lock = bucket_map_.try_lock(now().seconds(), degraded);
     if (!lock.ok) {
+      // A3：锁定失败原因不再静默丢弃（blocking_reason 可观测性，11 册 §13.1）
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000,
+        "锁定未就绪(%s): %s", degraded ? "degraded" : "normal", lock.reason.c_str());
       return false;
     }
     payload_targets_ = cuadc_drop::sorted_targets(lock.targets, drop_order_);
@@ -1243,14 +1281,38 @@ private:
     release_gate_.reset();
     sequencer_ = cuadc_drop::DropSequencer{};
     servo_release_pending_ = false;
+    servo_reject_streak_ = 0;      // A4-1：新载荷重置拒绝连击
+    servo_fire_unknown_ = false;
+    servo_cmd_is_fire_ = false;
     target_ = aim_point_;                          // 冻结飞机位置（SSOT §5.2）
     RCLCPP_INFO(get_logger(), "瞄准点冻结 (%.2f, %.2f)，进入释放门控",
       aim_point_.x, aim_point_.y);
     enter(State::RELEASE);
   }
 
+  /// 触发单发投放（gate kFire 与 A4-1 拒绝重投共用的唯一入口；单发保护在
+  /// DropSequencer::fire 内部——gate 幂等 + 非 IDLE 拒绝，双保险）。
+  void fire_payload(double t)
+  {
+    if (!sequencer_.fire(t)) {
+      return;
+    }
+    RCLCPP_INFO(get_logger(), "释放门控通过：载荷 %zu → 舵机 CH%d %.0fµs%s",
+      payload_index_, servo_channel_[payload_index_], servo_release_pwm_,
+      enable_release_output_ ? "" : "（干跑，不发指令）");
+    if (enable_release_output_) {
+      servo_release_pending_ = true;
+      servo_cmd_deadline_ = now() + rclcpp::Duration::from_seconds(2.0);
+    }
+    if (sim_release_bridge_) {
+      request_sim_release();   // 仿真判分：虚拟判定节点按此刻位置判 A/B 区
+    }
+  }
+
   /// 释放（SSOT §5.2 释放八门控）：全过且连续稳定+保持才 fire；6s 超时弃桶。
   /// 反盲投由 target_age 门限保证——目标估计超龄永远到不了 fire。
+  /// A4-1：fire 指令被 FCU 拒绝 = 瓶未脱，回退 sequencer 重投且计数不推进
+  /// （旧实现拒绝只打 WARN 照样计数，真投虚报）；超时=结果未知，计数打标。
   void update_release()
   {
     if (!tracker_) {
@@ -1278,32 +1340,39 @@ private:
     }
 
     if (verdict.status == cuadc_drop::GateStatus::kFire) {
-      // DropSequencer 单发保护：gate 的 kFire 也只出现一次（幂等双保险）
-      if (sequencer_.fire(t)) {
-        RCLCPP_INFO(get_logger(), "释放门控通过：载荷 %zu → 舵机 CH%d %.0fµs%s",
-          payload_index_, servo_channel_[payload_index_], servo_release_pwm_,
-          enable_release_output_ ? "" : "（干跑，不发指令）");
-        if (enable_release_output_) {
-          servo_release_pending_ = true;
-          servo_cmd_deadline_ = now() + rclcpp::Duration::from_seconds(2.0);
-        }
-        if (sim_release_bridge_) {
-          request_sim_release();   // 仿真判分：虚拟判定节点按此刻位置判 A/B 区
-        }
-      }
+      fire_payload(t);
+    }
+    // A4-1 重投路径：fire 被拒后 sequencer 已回退 IDLE，而 gate 幂等只发一次
+    // kFire——按"gate 已放行 + sequencer 空闲 + 无在途发送"补一次触发。
+    if (verdict.status == cuadc_drop::GateStatus::kFired && enable_release_output_ &&
+      !servo_release_pending_ && sequencer_.is_idle())
+    {
+      fire_payload(t);
     }
     if (servo_release_pending_) {
-      if (send_servo(servo_channel_[payload_index_], servo_release_pwm_)) {
+      if (send_servo(servo_channel_[payload_index_], servo_release_pwm_, true)) {
         servo_release_pending_ = false;
       } else if (now() > servo_cmd_deadline_) {
         fail_and_return("Servo release command could not be sent");
         return;
       }
     }
+    // A4-1：0.7s 保持到期但 fire 结果未回（ACK 通常 <100ms）→ 先等结果再走
+    // kStow，避免"拒绝也计数"；结果最多等 kServiceTimeoutS 超时清理。
+    if (enable_release_output_ && sequencer_.hold_elapsed(t) && command_future_.valid()) {
+      return;
+    }
     if (sequencer_.tick(t) == cuadc_drop::SeqResult::kStow) {
       if (enable_release_output_) {
         servo_stow_pending_ = true;
         servo_stow_channel_ = servo_channel_[payload_index_];   // 回仓逐拍重试
+      }
+      if (servo_fire_unknown_) {
+        ++payload_result_unknown_;
+        RCLCPP_WARN(get_logger(),
+          "载荷 %zu fire 结果超时未知，计数按已投推进并打标（累计未知 %d）",
+          payload_index_, payload_result_unknown_);
+        servo_fire_unknown_ = false;
       }
       finish_payload(t);
       return;
@@ -1369,15 +1438,19 @@ private:
     if (!servo_stow_pending_) {
       return;
     }
-    if (send_servo(servo_stow_channel_, servo_stowed_pwm_)) {
+    if (send_servo(servo_stow_channel_, servo_stowed_pwm_, false)) {
       servo_stow_pending_ = false;
     }
   }
 
   /// 舵机指令（MAV_CMD_DO_SET_SERVO）：独立 0.3s 节流（释放→回仓仅隔 0.7s，
-  /// 不能用全局 1s 节流），服务未就绪返回 false 由调用方重试。
-  bool send_servo(int channel, double pwm)
+  /// 不能用全局 1s 节流）。A4-2：上一条指令结果未回时返回 false（串行化，
+  /// 防止覆盖未决 future）；is_fire 归因结果——拒绝→回退重投，成功→清连击。
+  bool send_servo(int channel, double pwm, bool is_fire)
   {
+    if (command_future_.valid()) {
+      return false;   // A4-2：上一条指令结果未回，下拍重试
+    }
     if (now() - last_servo_time_ < rclcpp::Duration::from_seconds(0.3)) {
       return false;
     }
@@ -1389,7 +1462,11 @@ private:
     req->confirmation = false;
     req->param1 = static_cast<float>(channel);
     req->param2 = static_cast<float>(pwm);
-    command_future_ = command_client_->async_send_request(req).future.share();
+    auto far = command_client_->async_send_request(req);
+    command_req_id_ = far.request_id;
+    command_sent_at_ = now();
+    command_future_ = far.future.share();
+    servo_cmd_is_fire_ = is_fire;
     last_servo_time_ = now();
     RCLCPP_INFO(get_logger(), "SERVO CH%d → %.0fµs", channel, pwm);
     return true;
@@ -1613,8 +1690,11 @@ private:
     if (!sim_release_client_->service_is_ready() || sim_release_future_.valid()) {
       return;
     }
-    sim_release_future_ = sim_release_client_->async_send_request(
-      std::make_shared<std_srvs::srv::Trigger::Request>()).future.share();
+    auto far = sim_release_client_->async_send_request(
+      std::make_shared<std_srvs::srv::Trigger::Request>());
+    sim_rel_req_id_ = far.request_id;
+    sim_rel_sent_at_ = now();
+    sim_release_future_ = far.future.share();
   }
 
   bool request_allowed() const
@@ -1631,7 +1711,10 @@ private:
     req->altitude = static_cast<float>(takeoff_alt_m_);
     req->yaw = static_cast<float>(locked_compass_deg_);
     last_request_time_ = now();
-    takeoff_future_ = takeoff_client_->async_send_request(req).future.share();
+    auto far = takeoff_client_->async_send_request(req);
+    takeoff_req_id_ = far.request_id;
+    takeoff_sent_at_ = now();
+    takeoff_future_ = far.future.share();
     takeoff_sent_ = true;
   }
 
@@ -1643,7 +1726,10 @@ private:
     auto req = std::make_shared<mavros_msgs::srv::CommandTOL::Request>();
     req->yaw = static_cast<float>(locked_compass_deg_);
     last_request_time_ = now();
-    land_future_ = land_client_->async_send_request(req).future.share();
+    auto far = land_client_->async_send_request(req);
+    land_req_id_ = far.request_id;
+    land_sent_at_ = now();
+    land_future_ = far.future.share();
   }
 
   void request_arm(bool arm)
@@ -1654,12 +1740,44 @@ private:
     auto req = std::make_shared<mavros_msgs::srv::CommandBool::Request>();
     req->value = arm;
     last_request_time_ = now();
-    arm_future_ = arm_client_->async_send_request(req).future.share();
+    auto far = arm_client_->async_send_request(req);
+    arm_req_id_ = far.request_id;
+    arm_sent_at_ = now();
+    arm_future_ = far.future.share();
   }
 
-  /// 非阻塞回收服务结果（wait_for(0s) 只看一眼绝不等待）；起飞被拒则下拍重试
+  /// A1-1：future 在途超过 kServiceTimeoutS 未回 → 清理客户端 pending 并报告。
+  /// 清理≠撤销远端动作，结果语义=未知，由调用方按各服务的兜底路径处理。
+  /// 返回 true 表示 future 已被超时清理，调用方跳过本轮结果检查。
+  template<typename SrvT>
+  bool service_timed_out(rclcpp::Client<SrvT> & client,
+    const rclcpp::Client<SrvT>::SharedFuture & future,
+    int64_t & request_id, const rclcpp::Time & sent_at, const char * name)
+  {
+    if (!future.valid() ||
+      future.wait_for(0s) == std::future_status::ready ||
+      (now() - sent_at).seconds() < kServiceTimeoutS)
+    {
+      return false;
+    }
+    client.remove_pending_request(request_id);
+    RCLCPP_WARN(get_logger(),
+      "%s 服务 %.1fs 无 ACK：已清理 pending（结果=未知，远端动作不撤回）",
+      name, kServiceTimeoutS);
+    return true;
+  }
+
+  /// 非阻塞回收服务结果（wait_for(0s) 只看一眼绝不等待）。
+  /// A1-1：每个在途请求都超时清理（防 future 恒 valid 卡死重发）；超时=结果
+  /// 未知——起飞/降落/上锁按遥测与节流重发兜底，舵机 fire 走 unknown 打标。
   void check_service_results()
   {
+    if (service_timed_out(*takeoff_client_, takeoff_future_, takeoff_req_id_,
+        takeoff_sent_at_, "takeoff"))
+    {
+      takeoff_future_ = {};
+      takeoff_sent_ = false;   // 结果未知：允许重发（TAKEOFF 有高度门+超时兜底）
+    }
     if (takeoff_future_.valid() && takeoff_future_.wait_for(0s) == std::future_status::ready) {
       const auto res = takeoff_future_.get();
       if (!res->success) {
@@ -1667,22 +1785,73 @@ private:
       }
       takeoff_future_ = {};
     }
+    if (service_timed_out(*land_client_, land_future_, land_req_id_,
+        land_sent_at_, "land"))
+    {
+      land_future_ = {};       // LAND 态按节流重发，结果未知由落地遥测把守
+    }
     if (land_future_.valid() && land_future_.wait_for(0s) == std::future_status::ready) {
       (void)land_future_.get();
       land_future_ = {};
+    }
+    if (service_timed_out(*arm_client_, arm_future_, arm_req_id_,
+        arm_sent_at_, "arm"))
+    {
+      arm_future_ = {};        // DISARM/LAND 态按节流重发
     }
     if (arm_future_.valid() && arm_future_.wait_for(0s) == std::future_status::ready) {
       (void)arm_future_.get();
       arm_future_ = {};
     }
+    if (service_timed_out(*command_client_, command_future_, command_req_id_,
+        command_sent_at_, "command"))
+    {
+      command_future_ = {};
+      if (servo_cmd_is_fire_) {
+        // fire 结果未知（远端可能已执行）：DO_SET_SERVO 幂等，计数按已投
+        // 推进但在 kStow 处打标（payload_result_unknown_）
+        servo_cmd_is_fire_ = false;
+        servo_fire_unknown_ = true;
+        RCLCPP_WARN(get_logger(),
+          "舵机 fire 指令 %.1fs 无 ACK：结果未知，计数按已投推进并打标",
+          kServiceTimeoutS);
+      }
+    }
     if (command_future_.valid() &&
       command_future_.wait_for(0s) == std::future_status::ready)
     {
       const auto res = command_future_.get();
-      if (!res->success) {
-        RCLCPP_WARN(get_logger(), "Servo command rejected by FCU");
-      }
       command_future_ = {};
+      const bool was_fire = servo_cmd_is_fire_;
+      servo_cmd_is_fire_ = false;
+      if (res->success) {
+        if (was_fire) {
+          servo_reject_streak_ = 0;    // fire 被接受：连击清零
+        }
+      } else if (was_fire) {
+        ++servo_reject_streak_;
+        // A4-1：拒绝=瓶未脱，回退 sequencer 重投（update_release 补触发），
+        // 计数不推进——旧实现这里只 WARN 照样计数，真投虚报
+        if (sequencer_.abort_fire()) {
+          RCLCPP_ERROR(get_logger(),
+            "舵机 fire 指令被 FCU 拒绝（连续第 %d 次）：瓶未脱，已回退重投"
+            "（计数不推进）", servo_reject_streak_);
+          if (servo_reject_streak_ >= 3) {
+            fail_and_return("Servo fire command rejected 3 times by FCU");
+            return;
+          }
+        } else {
+          RCLCPP_WARN(get_logger(),
+            "舵机 fire 结果=拒绝，但 sequencer 已不可回退（已 finish/复位），按告警处理");
+        }
+      } else {
+        RCLCPP_WARN(get_logger(), "舵机回仓指令被 FCU 拒绝，下拍重试");
+      }
+    }
+    if (service_timed_out(*sim_release_client_, sim_release_future_,
+        sim_rel_req_id_, sim_rel_sent_at_, "sim_release"))
+    {
+      sim_release_future_ = {};
     }
     if (sim_release_future_.valid() &&
       sim_release_future_.wait_for(0s) == std::future_status::ready)
@@ -1814,6 +1983,22 @@ private:
   rclcpp::Time servo_cmd_deadline_;
   rclcpp::Time last_servo_time_;
   int payloads_released_ = 0;
+  // ---- A4-1/A4-2：舵机指令归因与拒绝防线 ----
+  bool servo_cmd_is_fire_ = false;     ///< 在途指令归因（A4-2 串行化后至多一条）
+  int servo_reject_streak_ = 0;        ///< 连续 fire 被拒计数（≥3 弃任务）
+  bool servo_fire_unknown_ = false;    ///< fire 结果超时未知（计数打标）
+  int payload_result_unknown_ = 0;     ///< fire 结果未知的载荷数（DONE 汇总）
+  // ---- A1-1：在途请求归因（id 供 remove_pending_request，时刻供超时判定）----
+  int64_t takeoff_req_id_ = 0;
+  int64_t land_req_id_ = 0;
+  int64_t arm_req_id_ = 0;
+  int64_t command_req_id_ = 0;
+  int64_t sim_rel_req_id_ = 0;
+  rclcpp::Time takeoff_sent_at_;
+  rclcpp::Time land_sent_at_;
+  rclcpp::Time arm_sent_at_;
+  rclcpp::Time command_sent_at_;
+  rclcpp::Time sim_rel_sent_at_;
 
   // ---- 状态机运行时 ----
   State state_ = State::WAIT_FCU;

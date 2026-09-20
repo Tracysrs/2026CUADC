@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""RTK rover（瑞杰 RTK-01-R，接 V6X GPS2 口）一键配置+验证。
+"""RTK 流动站（CUAV C-RTK 3 X20P，接 V6X GPS2 口）一键配置+验证。
 
-背景（2026-09-13 实测）：本版 4.7-beta 固件没有 GPS2_BAUD 参数，波特率挂在
-SERIAL4_BAUD（旧式枚举：57=57600、230=230400、921=921600）。rover 出厂
-NMEA @921600，故需 GPS2_TYPE=3(NMEA) + SERIAL4_BAUD=921 + 重启。
-GPS_AUTO_SWITCH 保持 0（只看不切，SSOT 定位决策：NEO-3 为主）。
+2026-09-20 换代定案：瑞杰 RTK-01 退役封存（rover 损坏存疑），WANT 表改 X20P
+口径（旧 RTK-01 NMEA@921600 版见 git 历史）。X20P 出厂 UBX@230400：
+GPS2_TYPE=2(u-blox) + SERIAL4_BAUD=230(230400) + GPS_AUTO_SWITCH=1(UseBest，
+RTK Fixed 自动优先)。本版 4.7-beta 没有 GPS2_BAUD 参数，波特率挂 SERIAL4_BAUD
+（旧式枚举：57=57600、230=230400、921=921600）；⚠️ GPS2_TYPE 勿设 3——
+NMEA 驱动在本 beta 已删除。
+RTK 解需基站侧就绪：X20P 基站 USB→笔记本 Mission Planner（RTK Inject）注入
+RTCM（MSM4 最小消息集），否则流动端只有单点解，不会出现 RTK浮点(5)/RTK固定(6)。
 
 用法: python rtk_setup.py [COM口，默认 COM5]
   - 检查并写入参数（已正确则跳过）→ 可选重启 → 盯 GPS2 60s 出 RTK 状态
-注意：基站 RTK-01-B 必须上电完成 survey-in（LORA 灯亮），否则 rover 永远
-只有单点解，不会出现 RTK浮点(5)/RTK固定(6)。
 """
 
 import sys
@@ -19,7 +21,7 @@ from pymavlink import mavutil
 
 FIX_NAMES = ["无GPS", "无定位", "2D", "3D", "DGPS",
              "RTK浮点", "RTK固定", "静态", "PPP"]
-WANT = {"GPS2_TYPE": 3, "SERIAL4_BAUD": 921, "GPS_AUTO_SWITCH": 0}
+WANT = {"GPS2_TYPE": 2, "SERIAL4_BAUD": 230, "GPS_AUTO_SWITCH": 1}
 
 
 def get_param(m, name, wait=3.0):
@@ -97,7 +99,7 @@ def main():
             sys.exit("飞控未恢复，检查 USB")
 
     # 验证：盯 GPS1/GPS2 60s
-    print("\n盯 GPS1/GPS2 60s（GPS2 需 rover 接线正常；RTK 解还需基站 survey-in 完成）")
+    print("\n盯 GPS1/GPS2 60s（GPS2 需 X20P 流动端接线正常；RTK 解还需基站经 MP 注 RTCM）")
     # GPS_RAW_INT=24、GPS2_RAW=124（旧写法 116 是别的报文，GPS2 从未被请求过）
     for mid, iv in [(24, 1000000), (124, 1000000),
                     (mavutil.mavlink.MAVLINK_MSG_ID_RAW_IMU, 1000000),
@@ -133,21 +135,20 @@ def main():
     print("\n=== 结论 ===")
     g2 = last.get("GPS2_RAW")
     print(f"GPS1(NEO-3): {last.get('GPS_RAW_INT', '无数据')}")
-    print(f"GPS2(RTK rover): {g2 or '全程无报文'}")
+    print(f"GPS2(X20P 流动端): {g2 or '全程无报文'}")
     if g2 and "RTK" in g2:
         print("✅ RTK 链路全通")
     elif g2_fix >= 1:
-        print("⚠ rover 通信正常但未 RTK 解 → 检查基站是否上电且 survey-in 完成"
-              "（LORA 灯亮），Fix 收敛要等")
+        print("⚠ 流动端通信正常但未 RTK 解 → 检查基站链路：X20P 基站 USB→笔记本 MP "
+              "RTK Inject 是否在注入（MSM4 最小消息集）、433 数传带宽是否被挤占；Fix 收敛按分钟级预期")
     else:
-        # fix=0(NO_GPS)=整个监视期没解析到一条有效 NMEA；只要收到有效语句，
+        # fix=0(NO_GPS)=整个监视期没解析到一条有效报文；只要收到有效数据，
         # 哪怕无定位也是 fix=1（2026-09-16 实测：旧文案此时打"通信正常"，误导排查方向）
-        print("❌ FC 没收到 rover 任何有效 NMEA（fix=0）→ 物理链路按序排查：")
-        print("   1. rover 三颗 LED 是否亮（电源/LORA/RTK）")
-        print("   2. 6P GH 线针序：FC k 针 → rover k+1 针循环移位"
-              "（09-15 勘误定稿；旧直通接法=5V 撞 GND）")
-        print("   3. 是否插在飞控 GPS2 口（SERIAL4）；NEO-3 必须留在 GPS1")
-        print("   4. rover 出厂波特率若被改过，用厂家 APP 改回 921600")
+        print("❌ FC 没收到流动端任何有效报文（fix=0）→ 物理链路按序排查：")
+        print("   1. X20P 移动端供电（4.75~5.3V@200mA）与 4P 线针序"
+              "（TX/RX 交叉；⚠️ 勿套 RTK-01-R 的 k→k+1 循环移位规则，那是它的 6P 专用）")
+        print("   2. 是否插在飞控 GPS2 口（SERIAL4）；NEO-3 必须留在 GPS1")
+        print("   3. 出厂协议/波特率若被改过（应为 UBX@230400），用 CUAV 工具恢复")
 
 
 if __name__ == "__main__":

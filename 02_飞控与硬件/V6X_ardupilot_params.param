@@ -7,8 +7,9 @@
 #     - WPNAV_SPEED → WP_SPD（单位 m/s），LAND_SPEED → LAND_SPD_MS，FS_GCS_ENABL → FS_GCS_ENABLE
 #     - BATT_LOW → BATT_LOW_VOLT、BATT_CRT → BATT_CRT_VOLT（写不存在的旧名会被静默忽略）
 #     - RNGFND1_*/PLND_TYPE 在功能开启并重启前不存在 → 参数需【导入两遍，中间重启】
-#   ⚠️ 当前含 3 处临时值（TFmini/GPS 未到货，各节有 ⚠️ 标注，到货后恢复）：
-#     RNGFND1_TYPE / EK3_RNG_USE_HGT / BRD_SAFETY_DEFLT
+#   ⚠️ 当前含 3 处临时值（各节有 ⚠️ 标注，装机验收后恢复）：
+#     RNGFND1_TYPE / EK3_RNG_USE_HGT（微空 MT-01P，09-20 定案顶替 TFmini）/ BRD_SAFETY_DEFLT
+#   §5c GPS 段为 09-20 新增：GPS2=C-RTK 3 X20P 流动站，随到货同批导入（提前导入无害）
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
 # 注意：导入前先在原机上"保存参数到文件"做备份（已有 param_backup_*.param 可用）
@@ -83,29 +84,40 @@ EK3_SRC1_POSXY,3
 EK3_SRC1_POSZ,1
 EK3_SRC1_VELXY,3
 # 4m 以下激光辅助定高（方案 §3.2："EKF2_RNG_CTRL=1" 为 PX4 参数名，ArduPilot 对应此参数）
-# 依赖下方 TFmini（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
-# ⚠️ 临时=0：TFmini 未到货，2026-09-09 与 RNGFND1_TYPE 同轮禁用；接 TELEM3 后恢复 4
+# 依赖下方 MT-01P（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
+# ⚠️ 临时=0：MT-01P 未装机（09-20 定案顶替 TFmini），装机四点比对验收后恢复 4
 EK3_RNG_USE_HGT,0
 # 用视觉里程计（VIO）时改为 ExternalNav 并核对 EK3_SRC 相关项：
 # EK3_SRC1_POSXY,6
 # EK3_SRC1_VELXY,6
 
-# ---------- 5b. TFmini 激光定高（接 TELEM3 = SERIAL5；接其他口就改对应 SERIALx 两行） ----------
-# 串口：协议 11=RangeFinder，波特率 115=115200（TFmini 出厂默认）
+# ---------- 5b. 微空 MT-01P 激光定高（接 TELEM3 = SERIAL5；09-20 定案顶替 TFmini） ----------
+# 前置：MicoAssistant（USB-TTL）把 MT-01P 切 TFmini 兼容协议再接飞控
+# 串口：协议 11=RangeFinder，波特率 115=115200（TFmini 兼容模式默认）
 SERIAL5_PROTOCOL,11
 SERIAL5_BAUD,115
-# 驱动：20=Benewake TFmini（串口版；25 才是 I2C 版 TFmini）
+# 驱动：20=Benewake 串口系（TFmini 兼容；25 才是 I2C 版勿混；备选 MAVLink=10）
 # 懒加载：RNGFND1_TYPE 写入并重启后，MIN/MAX/GNDCLR 等子参数才会出现 → 需第二遍导入
 # （名字已实测确认：这版固件里 RNGFND1_MIN/MAX 沿用旧命名，单位 m）
-# ⚠️ 临时=0：TFmini 未到货，2026-09-09 禁用（SERIAL5 两行与子参数保留不动）；
-# 到货接 TELEM3 后恢复 20
+# ⚠️ 临时=0：MT-01P 未装机（09-20 定案；TFmini 时代 09-09 起禁用）；
+# 装机四点比对验收后恢复 20
 RNGFND1_TYPE,0
 RNGFND1_ORIENT,25
 RNGFND1_MIN,0.3
-RNGFND1_MAX,12
+RNGFND1_MAX,10
 RNGFND1_SCALING,1
 # 飞机着陆时传感器离地高度（按实际安装高度改）
 RNGFND1_GNDCLR,0.1
+
+# ---------- 5c. GPS/RTK（GPS1=NEO-3 不变；GPS2=C-RTK 3 X20P 流动站，09-20 定案） ----------
+# ⚠️ 随 X20P 到货同批两遍导入（提前导入无害：GPS2 无设备时 TYPE=2 只是空跑）
+# SERIAL4_BAUD=230 即 230400（X20P 出厂 UBX@230400；本 beta 无 GPS2_BAUD，波特率挂 SERIALx_BAUD）
+# ⚠️ GPS2_TYPE 勿设 3——NMEA 驱动本 beta 已删；X20P 是 UBX 设 2
+# 改正链：X20P 基站→笔记本 MP(RTK Inject)→433 数传→FC→GPS2（见 04 册 §3）
+GPS1_TYPE,1
+GPS2_TYPE,2
+SERIAL4_BAUD,230
+GPS_AUTO_SWITCH,1
 
 # ---------- 6. 精准降落（Orin 发 LANDING_TARGET，飞控 PLND 模块执行） ----------
 # ⚠️ 2026-09-14 勘误后口径：PLND_TYPE 0=Never / 1=CompanionComputer(MAVLink 收

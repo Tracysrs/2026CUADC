@@ -16,7 +16,8 @@ for msg_id, iv in [(mavutil.mavlink.MAVLINK_MSG_ID_GPS_RAW_INT, 500000),
                                  msg_id, iv, 0, 0, 0, 0, 0)
 
 # 读关键参数
-want = ["GPS_TYPE", "GPS_TYPE2", "GPS_AUTO_CONFIG", "SERIAL3_PROTOCOL", "SERIAL4_PROTOCOL",
+want = ["GPS_TYPE", "GPS_TYPE2", "GPS_AUTO_CONFIG", "GPS1_TYPE", "GPS2_TYPE", "GPS_AUTO_SWITCH",
+        "SERIAL3_PROTOCOL", "SERIAL4_PROTOCOL",
         "COMPASS_DEV_ID", "COMPASS_DEV_ID2", "COMPASS_DEV_ID3", "COMPASS_PRIO1_ID",
         "COMPASS_PRIO2_ID", "COMPASS_PRIO3_ID", "CAN_P1_DRIVER", "GPS_DRIVER_VERSION" ]
 params = {}
@@ -58,6 +59,6 @@ else:
 
 if last_gps2:
     ft = last_gps2.fix_type
-    print(f"\n--- GPS2: {FIX[ft] if ft < len(FIX) else ft} | 卫星: {last_gps2.satellites_visible} ---")
+    print(f"\n--- GPS2 (X20P 流动端): {FIX[ft] if ft < len(FIX) else ft} | 卫星: {last_gps2.satellites_visible} ---")
 
 master.close()

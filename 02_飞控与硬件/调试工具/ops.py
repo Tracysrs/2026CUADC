@@ -36,7 +36,7 @@ CMDS = {
     "gps":           ("check_gps.py",   "阶段2", "GPS 验收（3D Fix + ≥8星 + HDOP<1.5）"),
     "radio":         ("check_radio.py", "阶段2", "数传诊断（默认 COM10，只读；严禁 ATI5）"),
     "geo":           ("site_geo_check.py", "阶段2", "场地地理/就地测试：probe | here | record N"),
-    "rtk":           ("rtk_setup.py",  "阶段2", "RTK rover 一键配置+验证（GPS2_TYPE=3 + SERIAL4_BAUD=921）"),
+    "rtk":           ("rtk_setup.py",  "阶段2", "RTK 流动端一键配置+验证（X20P：GPS2_TYPE=2 + SERIAL4_BAUD=230）"),
     # ---- 阶段 3：动力 ----
     "motor":         ("motor_test.py",  "阶段3", "电机顺序/方向（拆桨！）: motor [COM口] [输出]"),
     "servo":         ("servo_test.py",  "阶段3", "舵机投放测试（COM 直连，回读 PWM 分辨供电问题）: servo [COM口] [9|10|9,10]"),

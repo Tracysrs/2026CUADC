@@ -6,7 +6,7 @@
 |---|---|
 | `V6X_ardupilot_params.param` | V6X ArduPilot 主参数（PLND / EKF2 激光 / WPNAV 等，任务书 W3 导入，**必须导入两遍中间重启**） |
 | `V6X_offboard_params.param` | offboard 相关参数快照 |
-| `参数备份/` | 飞控实测参数备份：`*_232322.param` 为**已配置基线**（今后 diff 对照基准），`*_230343.param` 为刷机默认 |
+| `参数备份/` | 飞控实测参数备份：`*_195845.param`（0919 新板，1071 项）为**当前已配置基线**（diff 对照基准），`*_195445.param` 为新板出厂默认；旧板备份（09-05~09-17）留档对照 |
 | `firmware/` | 飞控固件存档：已刷的 4.7-beta v2 + 回退备用版 + SIH 台架专用版（附 README 与 SHA256SUMS） |
 | `调试工具/README.md` | 飞控调试脚本：`ops.py` 统一入口 + check_fc / check_gps / prearm_diag / site_geo_check / rtk_setup / check_radio / verify_params / motor_test / servo_test / fc_* 全套；SIH 固件 Jetson 编译脚本 `sih_jetson_build.sh` 也在此 |
 | `设备参数/C-RTK3X20P.md` | CUAV C-RTK 3 X20P 基站+移动端（09-20 起 RTK 主链，验收达标后转正） |

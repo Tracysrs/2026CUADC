@@ -7,10 +7,10 @@
 
 | 项 | 内容 | 里程碑状态 |
 |---|---|---|
-| `cuadc_mission/` | 任务状态机：全生命周期状态机 + 感知接入 + 目标锁定 + 两段对准 + 八门控投放（SSOT §5.1/§5.2） | **M1 骨架 + M3 投放链就绪，待 SITL 验证**（C++ 核心已编译测试 145 项 PASS） |
+| `cuadc_mission/` | 任务状态机：全生命周期状态机 + 感知接入 + 目标锁定 + 两段对准 + 八门控投放（SSOT §5.1/§5.2） | **M1 骨架 + M3 投放链就绪，待 SITL 验证**（C++ 三件单测 252 checks + Python 58 例全绿，09-20；09-20 五批修复与重构**待 fc_regression_m3.sh 上机回归**） |
 | `cuadc_interfaces/` | 自定义消息包：侦察判读 `ReconClassification/ReconMarker`（契约 §5）；SafetyStatus 等 M4 接口后续在此追加 | 就绪 |
 | `cuadc_perception/` | 感知包：侦察判读 `hazard_recon_node`（已上机生产）+ **白桶感知 `bucket_perception_node`（M2，双通道 seg+LAB）** + **H 圆精准降落 `h_circle_node`（M4，LANDING_TARGET→PLND）** + 公共算法库 `vision_core.py`（纯算法可离线单测）+ 契约校验器 + 判读融合/查看器/仿真替身 | 09-13 全链代码落地，48 例单测全绿，待上机联调 |
-| `scripts/` | `setup_env_ubuntu22.sh`（环境一键装）+ `run_sitl.sh`（SITL 全链路一键拉起） | 就绪 |
+| `scripts/` | `setup_env_ubuntu22.sh`（环境一键装）+ `run_sitl.sh`（SITL 全链路一键拉起）+ `calibrate_camera.py`（相机内参棋盘标定 → calib.yaml，直供节点 calib_path） | 就绪 |
 | `接口契约.md` | 视觉↔状态机↔侦察↔PLND 接口权威文档（字段复用/哨兵/时间戳/心跳/判读消息/LANDING_TARGET 流） | **v1.3 定稿** |
 | `时间同步设计.md` | P0.4：取帧时刻戳 + odom 插值夹逼（代码已就绪，M2 仿真验收） | 设计+代码就绪 |
 | `源码导航.md` | mission_node 函数索引（按区块）+ 行为澄清表（旧口径→现行事实，§15-E3，新人防误解） | 09-20 定稿 |
@@ -36,12 +36,16 @@ PYTHONPATH=cuadc_perception python -m unittest discover -s cuadc_perception/test
 ```text
 cuadc_mission/
 ├── src/mission_node.cpp          # 状态机 + tick(20Hz) + 安全门禁 + 感知消费 + 投放决策调用 + 舵机
-├── include/cuadc_mission/drop_logic.hpp  # 投放决策核心 C++17（tools/drop_logic.py 的镜像，zig/g++ 编译验证 145 项 PASS）
+├── include/cuadc_mission/drop_logic.hpp   # 投放决策核心 C++17（tools/drop_logic.py 镜像，159 checks）
+├── include/cuadc_mission/route_logic.hpp  # 航线/坐标换算纯函数（tools/route_logic.py 镜像，66 checks）
+├── include/cuadc_mission/odom_interp.hpp  # P0.4 插值判定核心（tools/odom_interp.py 镜像，27 checks）
 ├── tools/drop_logic.py           # 投放决策核心（纯逻辑规范）：锁定五步/冻结/重捕获/八门控/单发舵机
+├── tools/route_logic.py / odom_interp.py  # 上述 hpp 的 Python 镜像（双端纪律）
 ├── tools/drop_sim.py             # 闭环仿真：运动学+视觉噪声+舵机延迟，蒙特卡洛验证
-├── tools/test_drop_logic.py      # 决策核心单元测试（29 例，本机可跑）
-├── tools/test_drop_sim.py        # 闭环仿真测试（10 例：基线/断视觉弃桶/投放顺序/压力）
+├── tools/test_drop_logic.py      # 决策核心单元测试（30 例，本机可跑）
+├── tools/test_route_logic.py / test_odom_interp.py  # 镜像测试（Python 侧共 58 例）
 ├── test/test_drop_logic.cpp      # hpp 镜像测试（colcon test 自动跑，或 zig/g++ 手动编译）
+├── test/test_route_logic.cpp / test_odom_interp.cpp  # 同上（三件共 252 checks）
 ├── config/mission_params.yaml    # 全部可调参数（默认值 = SSOT §5.2/§5.4 基线，74 项）
 ├── launch/mission.launch.py      # 单节点启动（MAVROS 需已在跑）
 ├── CMakeLists.txt / package.xml
@@ -106,10 +110,12 @@ CEP 中位 5.0cm，五条安全不变量（单发/新鲜度/不同筒/弃桶拉�
   （DO_SET_SERVO，0.7s 后回仓，回仓指令逐拍重试）→ 拉黑 → 下一瓶
 - 安全开关：`enable_release_output=false` 干跑（默认，只打日志不发舵机）；
   `m1_no_vision_mode=true` 全链路旁路演练
-- 验证状态：算法核心 C++（drop_logic.hpp）**编译并通过 145 项检查**；
+- 验证状态：算法核心 C++ 三件（drop_logic/route_logic/odom_interp）**编译并通过 252 项
+  检查**（09-20，Python 镜像 58 例同步全绿）；
   闭环仿真蒙特卡洛（tools/drop_sim.py）锁定 30/30、两瓶 60/60、命中 98%、
   CEP 中位 5.0cm、五条安全不变量零违反。**mission_node.cpp 本体（ROS 依赖）
-  本机无法编译——首次 colcon build 需在 Ubuntu/Jetson 上做，再过 SITL 全链路**
+  本机无法编译——09-20 五批改动上机前必须过 `fc_regression_m3.sh` 闸门
+  （04_仿真/仿真环境/jetson/）：colcon build + 单测 + SITL M3 判分自动回归**
 
 ### 与参考代码（公开版）的关键差异
 

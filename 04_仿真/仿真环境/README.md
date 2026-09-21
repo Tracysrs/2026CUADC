@@ -55,12 +55,20 @@ Jetson 侧脚本在 `jetson/` 子目录（Jetson 上同步放于 `~/sim_scripts/
 - `fcu_ready.py`：FCU 就绪门禁——直连 5762 探心跳连续稳定（默认 30 s 窗/600 s
   超时），跳过 reset 后分钟级启动不稳定窗；reset 后先跑它（任务脚本已内置同款
   门禁）再开飞
+- `reset_sim.sh`：全栈确定性重置（杀 SITL/GZ/mavros/任务节点残留 → fresh SITL + 无头
+  GZ； mavros 泄漏会抢 SERIAL0 单客户端槽——任务脚本 5760 占用 ABORT 的根因）
 - `fc_sitl_mission.sh [秒数]`：**全任务 M1 闭环**（2026-09-11 全程跑通 DONE，
   2026-09-12 zd550 机体验证 DONE）——起跑前自检 5760 占用 + FCU 心跳稳定窗 →
   MAVROS + set_message_interval + 状态机（auto_arm_on_guided + m1_no_vision）
   + 外部切 GUIDED 作 WAIT_GUIDED 放行扳机；轨迹 TAKEOFF→SEARCH 预设航线→
   RECON_SURVEY 6 航点拍照→RETURN_HOME→LAND→DISARM→DONE。无视觉模式下
   投放 0/2、拍照确认 0 属预期（ALIGN/RELEASE 旁路，拍照 1s 超时兜底）
+- `fc_sitl_m3.sh [秒数]`：**全任务 M3 判分闭环**（真值替身感知 + /drop_controller/release
+  虚拟判定，结束自动打分：投放 A/B 区与误差、判分累计、总时长）
+- `fc_regression_m3.sh`：**A 批代码上机闸门一键回归**（09-20 新增，SSOT §15 排期）——
+  colcon build（失败即中止）→ Python/C++ 单测 → reset_sim → fc_sitl_m3 判分，
+  自动判定"投放 2/2 全 A 区 + 总时长 ≤180s"输出 REGRESSION PASS/FAIL；
+  mission_node/drop_logic 改动上机前必跑
 - `cuadc_rescue_flight.sdf`：布设场景 + 内联碰撞地面（场地模型本体无碰撞体，
   裸跑会穿地）+ 已移除 Sensors 渲染系统
 

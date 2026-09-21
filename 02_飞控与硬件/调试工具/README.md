@@ -27,7 +27,7 @@
 | `bench_logger.py` | 台架联测电压记录仪（**Jetson 上跑**）：10Hz 记录电压/油门/急停/解锁态到 `/tmp/cuadc_bench*.csv`（600s 窗口）；注意与投放脚本**不可同跑**（同读串口互抢） |
 | `bench_drop.py` | 台架联测投放执行（**Jetson 上跑**，单进程独占串口）：等待解锁→怠速稳定 2s→自动释放/回仓，电压与事件打点进 CSV：`python3 bench_drop.py <通道> <释放PWM> <收拢PWM> <保持秒> <标签>` |
 | `sih_jetson_build.sh` | **在 Jetson 上跑**：SIH 台架固件一键原生编译（xpack 工具链 + 子模块离线部署），产物归档 `../firmware/`；编译坑实录见 2026-09-16 日志会话三 |
-| `sync_jetson.py` | **仓库→Jetson 一键同步**（本机跑，ops.py `sync` 入口；09-19 新增）：清单化映射（`03_机载软件` 三包 + `04_仿真/仿真环境/cuadc_rescue_sim` → Jetson `~/cuadc_ws/src/`，10 个 Jetson 侧脚本 → `~`）逐文件 md5 比对。`python sync_jetson.py` 只读报告 / `push [--yes]` 推送（Python tarfile 流）+推后复核 / `diff 关键词` 看单文件差异。**纪律：只推不拉**——仓库是 SSOT，Jetson 独有改动先人肉入库提交再下发；Jetson 无本仓克隆，此工具是唯一同步通道；推 `src/` 不影响运行中服务（跑 `install/` 空间），生效需 Jetson 重新 `colcon build`。首推修掉 43 项静默漂移（见 2026-09-19 日志） |
+| `sync_jetson.py` | **仓库→Jetson 一键同步**（本机跑，ops.py `sync` 入口；09-19 新增）：清单化映射（`03_机载软件` 三包 + `04_仿真/仿真环境/cuadc_rescue_sim` → Jetson `~/cuadc_ws/src/`，10 个 Jetson 侧脚本 → `~`）逐文件 md5 比对。`python sync_jetson.py` 只读报告 / `push [--yes]` 推送（Python tarfile 流）+推后复核 / `diff 关键词` 看单文件差异 / `manifest [development\|candidate\|approved_release] [--note ...] [--push]` **冻结证据链**（09-20 新增：commit+脏状态+全清单 md5 → 参数备份/manifest_*.json，approved_release 挂比赛冻结日）。**纪律：只推不拉**——仓库是 SSOT，Jetson 独有改动先人肉入库提交再下发；Jetson 无本仓克隆，此工具是唯一同步通道；推 `src/` 不影响运行中服务（跑 `install/` 空间），生效需 Jetson 重新 `colcon build`。首推修掉 43 项静默漂移（见 2026-09-19 日志） |
 
 SIH 台架在环仿真（计划 / 操作手册 / V6X_SIH_bench.param）在 [../../04_仿真/SIH台架/](../../04_仿真/SIH台架/SIH台架操作.md)。
 ## 使用注意

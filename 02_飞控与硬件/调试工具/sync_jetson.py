@@ -13,6 +13,8 @@
   python sync_jetson.py push --yes   # 同上，免确认
   python sync_jetson.py push 关键词 [关键词...]   # 只推路径含关键词的文件（--yes 可混用）
   python sync_jetson.py diff 关键词  # 看某文件 仓库vs Jetson 统一 diff（取第一个匹配）
+  python sync_jetson.py manifest [development|candidate|approved_release] [--note "..."] [--push]
+                                   # D3 冻结证据链：HEAD+脏状态+全清单 md5 → 参数备份/manifest_*.json（--push 加推 Jetson ~）
 
 映射清单（改布局必须同步改这里 + 根 README + SSOT §0）:
   03_机载软件/cuadc_{interfaces,mission,perception}  → jetson:cuadc_ws/src/同名
@@ -100,14 +102,71 @@ def remote_manifest(remote_paths):
     return hashes
 
 
+def cmd_manifest(args):
+    """D3（SSOT §15）：比赛冻结证据链——HEAD + 脏状态 + 全清单 md5 → manifest JSON
+    落 02_飞控与硬件/参数备份/manifest_<UTC时间>_<级别>.json；--push 加推 Jetson ~。
+    版本三级：development（平时）/ candidate（台架联测冻结）/ approved_release（比赛前）。
+    权重 SHA256 不在此清单（已有独立三端归档机制，见 SSOT §12 P0.2）。"""
+    import json
+    from datetime import datetime, timezone
+
+    level, note, push = "candidate", "", "--push" in args
+    positional = []
+    it = iter(args)
+    for a in it:
+        if a == "--level":
+            level = next(it, level)
+        elif a == "--note":
+            note = next(it, note)
+        elif a == "--push":
+            push = True
+        elif not a.startswith("--"):
+            positional.append(a)          # 位置参数：第一个=level（同步 Jetson 用法习惯）
+    if positional:
+        level = positional[0]
+    if level not in ("development", "candidate", "approved_release"):
+        sys.exit(f"ERROR: level 须为 development/candidate/approved_release，得到 {level!r}")
+
+    head = run(["git", "-C", str(REPO), "rev-parse", "HEAD"]).stdout.strip()
+    dirty = run(["git", "-C", str(REPO), "status", "--porcelain"]).stdout.splitlines()
+    local = local_manifest()
+    files = [{"jetson_path": rp, "md5": lh}
+             for rp, (_lp, lh) in sorted(local.items())]
+    now_utc = datetime.now(timezone.utc)
+    out = (REPO / "02_飞控与硬件" / "参数备份" /
+           f"manifest_{now_utc.strftime('%Y%m%d_%H%M%S')}_{level}.json")
+    doc = {
+        "level": level,
+        "note": note,
+        "generated_at_utc": now_utc.isoformat(timespec="seconds"),
+        "git_commit": head,
+        "git_dirty_entries": len(dirty),
+        "file_count": len(files),
+        "files": files,
+    }
+    out.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"[manifest] {level} → {out.name}")
+    print(f"  commit={head[:12]}  files={len(files)}  脏条目={len(dirty)}")
+    for line in dirty[:10]:
+        print(f"  dirty: {line}")
+    if dirty:
+        print("  ⚠️ 工作区不干净——冻结前应先全部提交，再重新生成 manifest")
+    if push:
+        r = run(["scp", "-o", "BatchMode=yes", str(out),
+                 f"{HOST}:~/cuadc_manifest_{level}.json"])
+        print("[manifest] 推送 Jetson: " + ("OK" if r.returncode == 0 else "失败"))
+
+
 def main():
     args = [a for a in sys.argv[1:]]
     mode = args[0] if args else "check"
     yes = "--yes" in args
     keys = [a for a in args[1:] if a != "--yes"]
-    if mode not in ("check", "push", "diff"):
+    if mode not in ("check", "push", "diff", "manifest"):
         print(__doc__)
         sys.exit(1)
+    if mode == "manifest":
+        sys.exit(cmd_manifest(keys))
 
     local = local_manifest()
     remote = remote_manifest(sorted(local))

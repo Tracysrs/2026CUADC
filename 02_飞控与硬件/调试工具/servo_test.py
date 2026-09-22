@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """舵机投放测试（Windows 直连版）：COM 口 MAVLink 直发 DO_SET_SERVO 跑投放时序
 
-用法: python servo_test.py [COM口] [舵机列表]   默认 COM5、SERVO9；测两路: servo_test.py COM5 9,10
+用法: python servo_test.py [COM口] [舵机列表]   默认 COM5、SERVO9+10（A1+A2 两路同测）；只测一路: servo_test.py COM5 9
 
 对应 Jetson 侧的 fc_servo_test.sh（ROS2/mavros 版）——逻辑一致：
   前提核验 → 解会话级安全开关 → 1500→1100(收拢)→1600(释放)→…→1500 时序。
@@ -16,7 +16,7 @@ from pymavlink import mavutil
 PORT = sys.argv[1] if len(sys.argv) > 1 else "COM5"
 BAUD = 115200
 SERVOS = (sorted({int(x) for x in sys.argv[2].split(",") if x.strip()})
-          if len(sys.argv) > 2 else [9])
+          if len(sys.argv) > 2 else [9, 10])
 if any(s not in (9, 10, 11, 12, 13, 14) for s in SERVOS):
     print("ERROR: 舵机通道只支持 AUX 口 SERVO9~14（MAIN1~8 被电机/预留占用）")
     sys.exit(1)

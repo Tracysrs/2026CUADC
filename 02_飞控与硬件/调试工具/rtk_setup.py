@@ -4,7 +4,9 @@
 2026-09-20 换代定案：瑞杰 RTK-01 退役封存（rover 损坏存疑），WANT 表改 X20P
 口径（旧 RTK-01 NMEA@921600 版见 git 历史）。X20P 出厂 UBX@230400：
 GPS2_TYPE=2(u-blox) + SERIAL4_BAUD=230(230400) + GPS_AUTO_SWITCH=1(UseBest，
-RTK Fixed 自动优先)。本版 4.7-beta 没有 GPS2_BAUD 参数，波特率挂 SERIAL4_BAUD
+RTK Fixed 自动优先) + GPS2_AUTO_CONFIG=0 + SERIAL4_PROTOCOL=5（后两项 09-22 依
+官方指南补：AP<4.8 固件需关 GPS 自动配置，本 beta=4.7 适用）。本版 4.7-beta
+没有 GPS2_BAUD 参数，波特率挂 SERIAL4_BAUD
 （旧式枚举：57=57600、230=230400、921=921600）；⚠️ GPS2_TYPE 勿设 3——
 NMEA 驱动在本 beta 已删除。
 RTK 解需基站侧就绪：X20P 基站 USB→笔记本 Mission Planner（RTK Inject）注入
@@ -21,7 +23,8 @@ from pymavlink import mavutil
 
 FIX_NAMES = ["无GPS", "无定位", "2D", "3D", "DGPS",
              "RTK浮点", "RTK固定", "静态", "PPP"]
-WANT = {"GPS2_TYPE": 2, "SERIAL4_BAUD": 230, "GPS_AUTO_SWITCH": 1}
+WANT = {"GPS2_TYPE": 2, "SERIAL4_BAUD": 230, "GPS_AUTO_SWITCH": 1,
+        "GPS2_AUTO_CONFIG": 0, "SERIAL4_PROTOCOL": 5}
 
 
 def get_param(m, name, wait=3.0):
@@ -145,8 +148,8 @@ def main():
         # fix=0(NO_GPS)=整个监视期没解析到一条有效报文；只要收到有效数据，
         # 哪怕无定位也是 fix=1（2026-09-16 实测：旧文案此时打"通信正常"，误导排查方向）
         print("❌ FC 没收到流动端任何有效报文（fix=0）→ 物理链路按序排查：")
-        print("   1. X20P 移动端供电（4.75~5.3V@200mA）与 4P 线针序"
-              "（TX/RX 交叉；⚠️ 勿套 RTK-01-R 的 k→k+1 循环移位规则，那是它的 6P 专用）")
+        print("   1. X20P 移动端供电（4.75~5.3V@200mA）与 UART2 6P 线针序"
+              "（1=5V+/2=RX2/3=TX2/6=GND 四线，TX/RX 交叉；⚠️ 勿套 RTK-01-R 的 k→k+1 循环移位规则，那是它的 6P 专用）")
         print("   2. 是否插在飞控 GPS2 口（SERIAL4）；NEO-3 必须留在 GPS1")
         print("   3. 出厂协议/波特率若被改过（应为 UBX@230400），用 CUAV 工具恢复")
 

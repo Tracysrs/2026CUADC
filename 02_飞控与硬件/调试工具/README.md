@@ -9,7 +9,7 @@
 | `check_gps.py` | GPS 定位 / 卫星数 / 罗盘检测（室外验收：3D Fix + ≥8 星 + HDOP<1.5）。2026-09-13 修 pymavlink 新版 VDOP 字段兼容 |
 | `prearm_diag.py` | 解锁前诊断（阶段0）：模式/RC/电池/EKF/罗盘一致性/参数门限一次汇总 + 抓 STATUSTEXT，只读不发解锁指令。2026-09-13 实战定位 "PreArm: Compasses inconsistent" |
 | `site_geo_check.py` | 场地地理数据（CONFIG 区预填自贡航空产业园：29.3765N/104.6258E/标高345m 占位）：probe 就地测试 / here 实测回填 / record N 记 GPS。严禁用高德 GCJ-02 坐标 |
-| `rtk_setup.py` | RTK 流动端（C-RTK 3 X20P 接 GPS2，09-20 换代）一键配置+验证：GPS2_TYPE=2(UBX) + **SERIAL4_BAUD=230**(230400 出厂值) + GPS_AUTO_SWITCH=1（本版 4.7 无 GPS2_BAUD 参数；⚠️ GPS2_TYPE 勿设 3——NMEA 驱动已删；旧 RTK-01 NMEA 版进 git 历史，见 02_飞控与硬件/设备参数/C-RTK3X20P.md） |
+| `rtk_setup.py` | RTK 流动端（C-RTK 3 X20P 接 GPS2，09-20 换代）一键配置+验证：GPS2_TYPE=2(UBX) + **SERIAL4_BAUD=230**(230400 出厂值) + GPS_AUTO_SWITCH=1 + GPS2_AUTO_CONFIG=0 + SERIAL4_PROTOCOL=5（后两项 09-22 依官方指南补：AP<4.8 固件需关自动配置；本版 4.7 无 GPS2_BAUD 参数；⚠️ GPS2_TYPE 勿设 3——NMEA 驱动已删；旧 RTK-01 NMEA 版进 git 历史，见 02_飞控与硬件/设备参数/C-RTK3X20P.md） |
 | `check_radio.py` | 地面数传诊断（默认 COM10）：链路活性（MAVLink 帧计数）+ AT 命令模式进入 + ATI 系列身份转储，只读不改参。**只发 `+++\r`**（远航 X6 = X-Rock 4.0 固件，裸 `+++` 无效）；**严禁 ATI5**（挂死 X-Rock 固件，只能重插 USB 恢复）。链路活跃时 AT 进不去（心跳流打断静默窗口），读/配电台先给机载端断电。MP 1.3.83 电台页对此电台必崩"端口被关闭"，配置走脚本核身 + 3DR Radio Config（见 2026-09-12 日志） |
 | `verify_params.py` | `--export` 全参数备份；`--diff 参数文件` 与文件逐项比对（配置一致性检查）；COM 漂移用 `--port` |
 | `load_params.py` | **参数文件导入**（逐项写入+回读确认+每遍重启+自动重连，默认两遍，脚本化替代 MP 手动导入）：`python load_params.py [COM口] [参数文件] [--passes N] [--no-reboot]`；导完必用 `verify_params.py --diff` 验收 |

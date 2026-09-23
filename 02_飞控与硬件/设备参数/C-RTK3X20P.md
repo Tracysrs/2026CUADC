@@ -20,7 +20,7 @@
 
 ## 2. 基站（地面侧）
 
-- 基站操作（09-22 二次修正——上一轮误判为 ArduPilot 配法，实际是 **CUAV 模块内部参数**，见官方系统参数表/手册摘录 §4）：基站角色与收敛全在模块参数——`GPS_TYPE`（0=单点/1=RTK基站/2=RTK流动/17/18=MovingBase）、`GNSS_BASE_MODE`（0=Survey-in/1=固定ECEF/2=固定LLH，收敛后 `GNSS_BASE_LAT/LON/H_CM` 固化复用）、`GNSS_SVIN_ACC_M=3`/`GNSS_SVIN_DUR_S=30`（默认 3.0m/30s，**用 LGC 收紧并记录实际收敛值**，HIT 教训：survey-in 2.49m 勉强过线）、`GNSS_RTK_MSM_VER=16`（出厂即 MSM4 档，与「最小消息集省带宽」决定一致，注入期仍须实测 NAV30）。配置工具=**LGC**（⚠️ UBX 原生配置接口被固件 NAK，u-center/脚本直配不可行；QGC 不支持 X20P、MP 配不了收敛项只做注入）；快速路径=**长按 MODE 键**切基站模式（LED 常绿）。官方称默认参数下流动端仍可达 RTK Fixed <1cm。
+- 基站操作（09-22 二次修正——上一轮误判为 ArduPilot 配法，实际是 **CUAV 模块内部参数**，见官方系统参数表/手册摘录 §4）：基站角色与收敛全在模块参数——`GPS_TYPE`（0=单点/1=RTK基站/2=RTK流动/17/18=MovingBase）、`GNSS_BASE_MODE`（0=Survey-in/1=固定ECEF/2=固定LLH，收敛后 `GNSS_BASE_LAT/LON/H_CM` 固化复用）、`GNSS_SVIN_ACC_M=3`/`GNSS_SVIN_DUR_S=30`（默认 3.0m/30s，**用 LGC 收紧并记录实际收敛值**，HIT 教训：survey-in 2.49m 勉强过线）、`GNSS_RTK_MSM_VER=16`（出厂即 MSM4 档，与「最小消息集省带宽」决定一致，注入期仍须实测 NAV30）。配置工具=**LGC**（⚠️ UBX 原生配置接口被固件 NAK，u-center/脚本直配不可行；QGC 不支持 X20P、MP 配不了收敛项只做注入；操作手册见同目录 [LGC操作手册.md](LGC操作手册.md)，2026-09-23 立册）；快速路径=**长按 MODE 键**切基站模式（LED 常绿）。官方称默认参数下流动端仍可达 RTK Fixed <1cm。
 - 改正链路（本机定案，与 RTK-01 的 LoRa 自包含架构不同）：**基站 USB Type-C → 地面笔记本 Mission Planner（RTK Inject）→ 433 数传（TELEM1/SERIAL1）→ 飞控 → GPS2 移动端**。零新增无线设备、不再有 900MHz LoRa 频段；代价 = 占数传带宽，注入期间必须实测 NAV30 无 >50ms 空洞（04 册 §3）。
 - 架设纪律：天线架高 1.5~2m、天顶开阔、远离反射面（多径是 Fix 收敛第一杀手）；survey-in 完成后**全程禁动**；**基站卡必建**（坐标来源 / 天线参考点 / 天线高 / 日期 / MSM 配置 / 允许架设位），换场地重新 survey-in。
 

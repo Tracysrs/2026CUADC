@@ -11,11 +11,12 @@ cuadc_mission:
     m1_no_vision_mode: true       # M1 演练：SEARCH 飞完预设航线即转侦察段（跳过对准/投放）。正式飞行必须改 false
     auto_arm_on_guided: false     # GUIDED 后是否自动解锁；false = 飞手手动解锁（默认，更安全）
 
-    # ---- 高度（m，相对起飞点）----
-    takeoff_alt_m: 4.0            # 起飞/返航 4.0（SSOT §5.4）
+    # ---- 高度（m，相对起飞点；2026-09-23 用户定案：起飞/返航 3.0、搜索 2.0、侦察 3.0）----
+    takeoff_alt_m: 3.0            # 起飞 3.0（SSOT §5.4；09-23 下调，原 4.0）
     search_alt_m: 2.0             # 搜索 2.0（4.2m 检不出桶，勿改高）
-    recon_alt_m: 4.0              # 侦察巡航高度（SSOT 未定值，待实测标定）
-    return_alt_m: 4.0
+    recon_alt_m: 3.0              # 侦察巡航 3.0（09-23 定案，原 4.0 待实测；降高=标识
+                                  # 成像更大；3m 半覆盖≈2.8m 仍盖 2.5m 带距无盲区）
+    return_alt_m: 3.0             # 返航与起飞同高（返航段免爬升）
 
     # ---- 速度（m/s）----
     transit_speed_m_s: 4.0        # 转场/爬升/返航
@@ -109,7 +110,8 @@ cuadc_mission:
     lock_blacklist_window_s: 120.0   # 拉黑时长
 
     # ==== M3 对准（SSOT §5.4：粗/精 0.15/0.08，稳定 0.8s，超时 12s）====
-    align_alt_m: 1.8
+    align_alt_m: 1.2              # 09-23 下调（原 1.8）：成像更大、弹道落差更短；
+                                  # 代价=下洗吹筒风险，外场试投验证（SSOT P3-4）
     align_coarse_radius_m: 0.15
     align_fine_radius_m: 0.08
     align_stable_s: 0.8

@@ -26,8 +26,8 @@
 
 ## 3. 移动端（机载流动站）
 
-- **主路线（2026-09-20 定案）：UART2 → V6X GPS2 口（SERIAL4）**。X20P 出厂 UBX@230400 → `GPS2_TYPE=2`(u-blox) + `SERIAL4_BAUD=230` + `GPS2_AUTO_CONFIG=0`（09-22 依官方指南补：AP<4.8 固件需关自动配置，本 beta=4.7 适用）；与 NEO-3（GPS1）组双 GPS，`GPS_AUTO_SWITCH=1`（UseBest，RTK Fixed 自动优先）。⚠️ UART 路线用不到内置 RM3100 罗盘（主罗盘仍 NEO-3 IST8310）。
-- 备选路线：CAN/DroneCAN（官方推荐路径，RM3100 可用）——需与 PMU 共总线，审计 `CAN_P1_DRIVER`/节点 ID/FD 比特率对齐；**UART 实测异常（25Hz 吞吐/抗扰）时再切**，不并行折腾。
+- **主路线（2026-09-23 用户拍板切 CAN）：CAN/DroneCAN 接入 GPS1 位**——FC 四钥匙 09-23 已落机：`CAN_P1_DRIVER=1` / `CAN_D1_PROTOCOL=1` / `GPS1_TYPE=9` / `GPS_AUTO_CONFIG=2`（官方 CAN 指南口径）；当日启动日志抓到 "GPS 1: detected DroneCAN1-123"=节点枚举成功。09-24 通断检测模块侧静默待查（供电 CAN1 5V / H-L 对调 / 插件虚接 / LGC 侧 FD 模式四嫌疑）。内置 RM3100 罗盘随 CAN 可用（升主罗盘拍板挂账，前置=LGC 检查；现役=双板载 RM3100）。
+- 备选路线（原 09-20 主路线，降为回退）：UART2 → V6X GPS2 口（SERIAL4）——X20P 出厂 UBX@230400 → `GPS2_TYPE=2`(u-blox) + `SERIAL4_BAUD=230` + `GPS2_AUTO_CONFIG=0`（09-22 依官方指南补：AP<4.8 固件需关自动配置，本 beta=4.7 适用）；"与 NEO-3 组双 GPS"口径已随 09-22 单RTK 拍板（NEO-3 拔除）过期，待 SSOT §3.2 改写一并清理。
 - ⚠️ **接线规则勿套用 RTK-01-R**：其「FC k 针 → rover k+1 针循环移位」只适用 RTK-01-R 的 6P 针序；X20P 的 **UART2 亦为 6P**（1=5V+ / 2=RX2 / 3=TX2 / 4=PPS / 5=EVENTA / 6=GND，09-22 官方引脚图已核），6P 对 6P 只用 4 线、PPS/EVENTA 悬空，万用表逐针后插（家规）。
 - ⚠️ `GPS2_TYPE` **勿设 3**——本 beta 已删除 NMEA 驱动（同 04 册 §4.2 勿设 3 之坑）；X20P 默认 UBX，设 2。
 

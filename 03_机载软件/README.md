@@ -76,8 +76,8 @@ CEP 中位 5.0cm，五条安全不变量（单发/新鲜度/不同筒/弃桶拉�
 ```text
 准备：WAIT_FCU → WAIT_NAV_STABLE → LOCK_FRAME(航向2s内变≤2°) → PRESTREAM(预发setpoint 1.5s)
       → WAIT_GUIDED(飞手切GUIDED) → WAIT_ARM
-任务：TAKEOFF(4m, 0.9×高切setpoint) → SEARCH(2m蛇形) → ALIGN → RELEASE(×2)  [M3]
-侦察：RECON_CLIMB → RECON_SURVEY(蛇形6航点+拍照握手) → RETURN_CLIMB → RETURN_HOME(4m)
+任务：TAKEOFF(3m, 0.9×高切setpoint) → SEARCH(2m蛇形) → ALIGN → RELEASE(×2)  [M3]
+侦察：RECON_CLIMB → RECON_SURVEY(蛇形6航点+拍照握手) → RETURN_CLIMB → RETURN_HOME(3m)
 收尾：LAND(≤0.30m+速度门限+稳定1.5s) → DISARM(自动上锁) → DONE
 旁路：PILOT_OVERRIDE(飞手切走GUIDED,程序退让) / ABORT(致命故障)
 ```
@@ -167,7 +167,7 @@ ros2 topic echo /cuadc/mission_state
 - [x] SITL：起降 + 预设航线全流程无人工干预，状态轨迹 `WAIT_FCU → … → DONE`（9-7 Jetson 实测，ArduPilot SITL 无 Gazebo 轻量链路）
 - [x] 飞行中遥控切出 GUIDED：节点停发目标点、打印 `PILOT_OVERRIDE` 并退出（接管保护）（9-7 实测）
 - [x] 断定位流（模拟 odom 断流 >1s）：触发 fail 路径安全落地（9-7 SIGSTOP SITL 实测：`MISSION_FAILURE: Odometry stale`）
-- [ ] 真机首测（**拆桨**）：起飞 4m → 航线 → 返航 → 降落 → 自动上锁，全程 ≤40s
+- [ ] 真机首测（**拆桨**）：起飞 3m → 航线 → 返航 → 降落 → 自动上锁，全程 ≤40s
 - [ ] `LOCK_FRAME` 态故意晃动机头：航向漂移超 2° 时锁不上、超时判失败
 
 ## 红线

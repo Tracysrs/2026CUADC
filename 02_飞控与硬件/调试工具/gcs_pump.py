@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""GCS 心跳泵（先发后收）：让 ArduPilot 在 mavros 链路开始流送"""
+"""GCS 心跳泵（先发后收）：让 ArduPilot 在 mavros 链路开始流送
+（同源镜像：权威版 = 03_机载软件/scripts/gcs_pump.py 详注版；改动先改彼处再同步本副本，勿双边独立改）"""
 import time
 from pymavlink import mavutil
 conn = mavutil.mavlink_connection('tcp:127.0.0.1:14550',

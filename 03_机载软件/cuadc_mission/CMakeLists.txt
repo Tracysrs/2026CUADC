@@ -46,6 +46,10 @@ if(BUILD_TESTING)
   add_executable(test_route_logic test/test_route_logic.cpp)
   target_include_directories(test_route_logic PRIVATE include)
   add_test(NAME test_route_logic COMMAND test_route_logic)
+  # 时间域插值纯函数单测（P0.4，09-20；09-25 补注册——此前仅手动编译，colcon test 不跑）
+  add_executable(test_odom_interp test/test_odom_interp.cpp)
+  target_include_directories(test_odom_interp PRIVATE include)
+  add_test(NAME test_odom_interp COMMAND test_odom_interp)
 endif()
 
 ament_package()

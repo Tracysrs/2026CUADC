@@ -30,7 +30,7 @@ struct Bucket {
 class VirtualDropJudge : public rclcpp::Node {
 public:
   VirtualDropJudge() : Node("virtual_drop_judge_node") {
-    // 默认值 = 03_工具/仿真环境/cuadc_rescue_sim/config/generated_scene.yaml
+    // 默认值 = 04_仿真/仿真环境/cuadc_rescue_sim/config/generated_scene.yaml
     load_bucket("drop_1", 28.44, 0.02, 0.075, 500);
     load_bucket("drop_2", 30.05, 2.56, 0.10, 300);
     load_bucket("drop_3", 28.37, -1.96, 0.125, 100);

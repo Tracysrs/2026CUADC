@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # H 圆（h_marker）单类检测模型一键训练（AutoDL / 本地 GPU）
-# 数据：自制 ø80cm H 标 ~200 张（采集卡见 01_视觉感知/数据与训练/barrel_seg_tools/采集操作卡.md）
+# 数据：自制 ø80cm H 标 ~200 张（采集卡见 01_视觉感知/数据与训练/barrel_seg_tools/采集操作卡_白筒与H圆.md）
 # 初值路线：有 helipad 公开集预训权重则传入作为起点，没有直接 COCO yolov8n 起（SSOT §8.1）
 # 用法：bash run_hmarker_training.sh <数据集目录（含 data.yaml，单类 0=h_marker）> [helipad.pt] 
 set -euo pipefail

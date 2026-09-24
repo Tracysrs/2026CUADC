@@ -1,7 +1,8 @@
 # 微空 MicoAir MT-01P UART 激光测距模块规格与集成定案
 
-> 2026-09-20 采购定案，**顶替 TFmini（串口版）的定高激光空位**（SSOT §3.2 定高行；TFmini 一直未到货）。占用早已预留的 TELEM3/SERIAL5 串口与参数骨架，接入改动最小。
-> 来源：微空科技官网 micoair.cn 手册 / micoair.com 官方 ArduPilot 指南（2026-09-20 查）；实物手册到货后归 `08_参考资料/手册/`，实测回填本册。
+> 2026-09-20 采购定案，**顶替 TFmini（串口版）的定高激光空位**（SSOT §3.2 定高行；TFmini 一直未到货）。
+> **2026-09-24 实测定案（本册权威，覆盖 09-20 旧方案）**：出厂默认协议=**MAVLink**（官方文档实表仅 Micolink/MAVLink/MSP 三种，**无 TFmini**）→ 直接收数无需微空助手；接 **TELEM1**（TELEM3/切 TFmini/TYPE=20 旧方案作废）；卷尺四点比对通过，`EK3_RNG_USE_HGT=4` 已激活。
+> 来源：微空科技官网 micoair.cn 手册 / micoair.com 官方 ArduPilot 指南（09-20 查、09-24 官方页复核）；实物手册到货后归 `08_参考资料/手册/`。
 
 ## 1. 规格
 
@@ -12,28 +13,34 @@
 | 光源 | 激光测距，抗强光，室内外可用 |
 | 接口 | UART（VCC / TX / RX / GND），供电 5V |
 | 重量 | ~15g |
-| 协议 | **多协议可配**：MicoAssistant 软件 + USB-TTL 预配置（含 **TFmini 兼容**、MAVLink 等） |
+| 协议 | **三选一可配**：Micolink / MAVLink / MSP（官方文档实表；**无 TFmini**——09-20"切 TFmini"前提有误已作废）。出厂默认=MAVLink（ArduPilot 即插即用）；改协议需 MicoAssistant+USB-TTL（⚠️ 模块无 USB 桥芯片，TypeC 只是插头形状，不可当 USB-TTL 用——09-24 分线板实测） |
 
-## 2. ArduPilot 集成（两条分支）
+## 2. ArduPilot 集成（2026-09-24 实测定案）
 
-- **主路线：MicoAssistant 把 MT-01P 切 TFmini 兼容协议** → 现有参数骨架零改动沿用：`SERIAL5_PROTOCOL=11` + `SERIAL5_BAUD=115` + `RNGFND1_TYPE=20`（20=串口 Benewake 系；25 是 I2C 版勿混）。推荐理由：参数骨架 / 懒加载两遍导入流程 / 临时台账全部现成。
-- 备选：MAVLink 输出 → `RNGFND1_TYPE=10`（微空官方 ArduPilot 指南口径），需改 `SERIAL5_PROTOCOL`——**仅当 TFmini 兼容模式实测有问题时切换**。
-- 高度融合：`EK3_RNG_USE_HGT=4`（4m 以下激光辅助；主高度源仍 `EK3_SRC1_POSZ=1` 气压计）。
+- **定案路线：出厂 MAVLink 协议直收，接 TELEM1（=SERIAL1）**：`SERIAL1_PROTOCOL=1`（MAVLink1）+ `SERIAL1_BAUD=115`（115200）+ `SERIAL1_OPTIONS=0` + `RNGFND1_TYPE=10`（10=MAVLink 测距；25 是 I2C 版勿混）。实测 14~24Hz 稳定出数。
+- ⚠️ **`SERIAL1_OPTIONS` 必须 =0**（双层根因，09-24 实证）：bit0（值 1，出厂默认）掐断该口 MAVLink **输入**=模块零数据（当日全部零数据窗口与 bit0=1 完全相关）；bit10（1024，微空文档的"禁转发"）会被 ArduPilot PreArm 拒绝（要求改用 `MAV1_OPTIONS` bit1——该参数懒加载未见，待核对）。"禁转发"与收数无冲突，OPTIONS=0 即可。
+- ~~09-20~09-23 主路线：MicoAssistant 切 TFmini 兼容协议 + TELEM3/SERIAL5 + `RNGFND1_TYPE=20`~~ **作废**（前提错误：该模块无 TFmini 协议；留档防重提）。
+- 高度融合：`EK3_RNG_USE_HGT=4`（4m 以下激光辅助；主高度源仍 `EK3_SRC1_POSZ=1` 气压计）——**09-24 卷尺四点比对通过后已激活持久化**（线性差分 1.4cm / 绝对 2.6~4.0cm，恒定 -3cm 低偏=安装基准面偏移，归 `RNGFND1_GNDCLR` 吸收）。
 
 ## 3. 与本机集成
 
 | 项 | 定案 |
 | --- | --- |
-| 物理接口 | V6X TELEM3/SERIAL5（5V + TX/RX 交叉 + GND，接线卡 02 册 §9.6） |
-| 参数 | `RNGFND1_TYPE=20`、`ORIENT=25`（下视）、`MIN=0.3`、`MAX=10`（按手册核定）、`SCALING=1`、`GNDCLR` 按实装 |
-| 上游参数 | `EK3_RNG_USE_HGT` 0→4（装机验收后恢复，现临时=0） |
+| 物理接口 | V6X TELEM1/SERIAL1（5V + TX/RX 交叉 + GND，接线卡 02 册 §9.6；TELEM3 已随迁空置 `SERIAL5_PROTOCOL=-1`） |
+| 参数 | `RNGFND1_TYPE=10`、`ORIENT=25`（下视）、`MIN=0.3`、`MAX=10`、`SCALING=1`、`GNDCLR` 按实装（现 0.1 占位，正式安装位定下后改） |
+| 上游参数 | `EK3_RNG_USE_HGT=4`（09-24 比对通过已激活持久化，0924_231201 备份实证） |
 | 收益 | 搜索 2.0m / 投放 1.3m 真实离地高；视觉 `h=odom_z−plane_z` 解算质量（SSOT §4.2）；PLND 末段距离源；着陆确认 ≤0.30m 判据 |
 | 验收 | 台架卷尺四点比对（0.3/0.6/1.3/2.0m，<2m 段 ≤4cm）；强光 / 草地 / 俯仰偏置记录；系留对比纯气压定高抖动 |
 
 ## 4. 到货核对清单
 
+> 2026-09-25 注：本清单大半被 09-24 实测定案跨越——协议无需切（出厂 MAVLink 直收）、卷尺四点比对已通过、`EK3_RNG_USE_HGT=4` 已激活；余下未闭环项只有 `GNDCLR` 正式安装位与强光/深色面表现记录（外场）。清单保留作流程档案。
+
 - [ ] 实物手册归档 + 与本文档比对（范围 / 精度 / 供电 / 线序）
-- [ ] MicoAssistant（官网下载 + USB-TTL）确认出厂协议；切 TFmini 兼容协议并记录
-- [ ] 线色实测（家规：勿凭记忆），TX/RX 交叉
-- [ ] 台架四点比对 + 强光 / 深色吸收面（草地、水面）表现记录
-- [ ] `MAX`/`GNDCLR` 按实装定稿；`EK3_RNG_USE_HGT=4` 两遍导入并回读
+- [x] 线色实测（家规：勿凭记忆），TX/RX 交叉（09-24 接线实做）
+- [x] 台架四点比对（09-24 通过：线性差分 1.4cm / 绝对 2.6~4.0cm）
+- [x] `EK3_RNG_USE_HGT=4` 激活并回读持久化确认（0924_231201 备份）
+- [ ] `GNDCLR` 按正式安装位定稿（现 0.1 占位）
+- [ ] 强光 / 深色吸收面（草地、水面）表现记录（外场）
+
+> 注：`MT-01P_接线图.png` 绘于 09-23 TELEM3 时代，接法口径已被本册 §2 取代（现接 TELEM1），**图待重绘**；现行接线以 02 册 §9.6 接线卡为准。

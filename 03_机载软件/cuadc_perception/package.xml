@@ -3,7 +3,7 @@
 <package format="3">
   <name>cuadc_perception</name>
   <version>0.1.0</version>
-  <description>CUADC 2026 感知包：侦察判读（hazard_recon，已上机）+ 白桶感知（bucket_perception，M2）+ H 圆精准降落（h_circle，M4）+ 契约校验器。接口见 10_机载代码/接口契约.md</description>
+  <description>CUADC 2026 感知包：侦察判读（hazard_recon，已上机生产）+ 白桶感知（bucket_perception）+ H 圆精准降落（h_circle）+ 判读转数传桥（recon_gcs_bridge，09-25）+ 契约校验器。接口见 03_机载软件/接口契约.md</description>
   <maintainer email="cuadc-team@users.noreply.github.com">CUADC Team</maintainer>
   <license>MIT</license>
 

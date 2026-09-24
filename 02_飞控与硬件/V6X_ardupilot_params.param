@@ -7,9 +7,10 @@
 #     - WPNAV_SPEED → WP_SPD（单位 m/s），LAND_SPEED → LAND_SPD_MS，FS_GCS_ENABL → FS_GCS_ENABLE
 #     - BATT_LOW → BATT_LOW_VOLT、BATT_CRT → BATT_CRT_VOLT（写不存在的旧名会被静默忽略）
 #     - RNGFND1_*/PLND_TYPE 在功能开启并重启前不存在 → 参数需【导入两遍，中间重启】
-#   ⚠️ 当前含 2 处临时值（各节有 ⚠️ 标注，验收后恢复）：
-#     EK3_RNG_USE_HGT（微空 MT-01P 已上机出数 09-24，卷尺四点比对后恢复 4）/ BRD_SAFETY_DEFLT
-#     （RNGFND1_TYPE 已定案 10=MAVLink 直收 MT-01P，09-24 实测 24Hz 出数，不再是临时值）
+#   ⚠️ 当前含 1 处临时值（各节有 ⚠️ 标注，验收后恢复）：
+#     BRD_SAFETY_DEFLT（装机完成后恢复 1）
+#     （EK3_RNG_USE_HGT=4 已于 09-24 激活持久化：卷尺四点比对通过——线性差 1.4cm/绝对 2.6~4.0cm；
+#       RNGFND1_TYPE 同日定案 10=MAVLink 直收 MT-01P，14~24Hz 出数，均非临时值）
 #   §5c GPS 段为 09-20 新增：GPS2=C-RTK 3 X20P 流动站，随到货同批导入（提前导入无害）
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
@@ -31,12 +32,10 @@ MOT_SPIN_ARM,0.13
 MOT_SPIN_MAX,0.95
 MOT_THST_EXPO,0.65
 
-# ---------- 1. 链路：TELEM1 = 空置封存【2026-09-24 定案】 ----------
-# （TELEM1 回传路径故障：09-23/09-24 两对电台同症"下行通上行死"，查线修复前禁用；
-#   09-11 端到端验收随之作废。历史：曾因随附线不配 TELEM1 座改走 UART4，后找到适配线改回）
-# 参数保留 2/57 备用（修复后可原值复用）
-SERIAL1_PROTOCOL,2
-SERIAL1_BAUD,57
+# ---------- 1. 链路：TELEM1(SERIAL1) = MT-01P 激光定高【2026-09-24 晚定案，参数见 §5b】 ----------
+# （本节不再单列 SERIAL1 参数行——§5b 是唯一定义；同日早间"空置封存 2/57"口径已被
+#   MT-01P 接 TELEM1 的实测定案覆盖。历史：两对电台插本口曾"下行通上行死"，
+#   09-24 翻案=口收路径健康（MT-01P 同口收数畅通），定性为电台内部速率与口波特率不匹配）
 # UART4(SERIAL6) 还原禁用备用（插新设备前先改参数）
 SERIAL6_PROTOCOL,-1
 SERIAL6_BAUD,57
@@ -88,8 +87,9 @@ EK3_SRC1_POSZ,1
 EK3_SRC1_VELXY,3
 # 4m 以下激光辅助定高（方案 §3.2："EKF2_RNG_CTRL=1" 为 PX4 参数名，ArduPilot 对应此参数）
 # 依赖下方 MT-01P（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
-# ⚠️ 临时=0：MT-01P 已上机出数（09-24），卷尺四点比对验收后恢复 4
-EK3_RNG_USE_HGT,0
+# 09-24 卷尺四点比对通过（线性差分 1.4cm / 绝对 2.6~4.0cm，恒定 -3cm 低偏归 GNDCLR），
+# 已激活=4 并持久化（param_backup_20260924_231201 实证）；回读不为 4 时按此行写入
+EK3_RNG_USE_HGT,4
 # 用视觉里程计（VIO）时改为 ExternalNav 并核对 EK3_SRC 相关项：
 # EK3_SRC1_POSXY,6
 # EK3_SRC1_VELXY,6

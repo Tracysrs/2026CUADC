@@ -7,8 +7,9 @@
 #     - WPNAV_SPEED → WP_SPD（单位 m/s），LAND_SPEED → LAND_SPD_MS，FS_GCS_ENABL → FS_GCS_ENABLE
 #     - BATT_LOW → BATT_LOW_VOLT、BATT_CRT → BATT_CRT_VOLT（写不存在的旧名会被静默忽略）
 #     - RNGFND1_*/PLND_TYPE 在功能开启并重启前不存在 → 参数需【导入两遍，中间重启】
-#   ⚠️ 当前含 3 处临时值（各节有 ⚠️ 标注，装机验收后恢复）：
-#     RNGFND1_TYPE / EK3_RNG_USE_HGT（微空 MT-01P，09-20 定案顶替 TFmini）/ BRD_SAFETY_DEFLT
+#   ⚠️ 当前含 2 处临时值（各节有 ⚠️ 标注，验收后恢复）：
+#     EK3_RNG_USE_HGT（微空 MT-01P 已上机出数 09-24，卷尺四点比对后恢复 4）/ BRD_SAFETY_DEFLT
+#     （RNGFND1_TYPE 已定案 10=MAVLink 直收 MT-01P，09-24 实测 24Hz 出数，不再是临时值）
 #   §5c GPS 段为 09-20 新增：GPS2=C-RTK 3 X20P 流动站，随到货同批导入（提前导入无害）
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
@@ -30,9 +31,10 @@ MOT_SPIN_ARM,0.13
 MOT_SPIN_MAX,0.95
 MOT_THST_EXPO,0.65
 
-# ---------- 1. 链路：TELEM1 -> 数传电台（地面站）【2026-09-11 端到端验收通过】 ----------
-# （当日曾因随附线不配 TELEM1 座改走 UART4，后找到适配线改回，UART4 还原备用）
-# MAVLink2 + 57600，与 SiK 数传出厂波特率一致
+# ---------- 1. 链路：TELEM1 = 空置封存【2026-09-24 定案】 ----------
+# （TELEM1 回传路径故障：09-23/09-24 两对电台同症"下行通上行死"，查线修复前禁用；
+#   09-11 端到端验收随之作废。历史：曾因随附线不配 TELEM1 座改走 UART4，后找到适配线改回）
+# 参数保留 2/57 备用（修复后可原值复用）
 SERIAL1_PROTOCOL,2
 SERIAL1_BAUD,57
 # UART4(SERIAL6) 还原禁用备用（插新设备前先改参数）
@@ -40,10 +42,11 @@ SERIAL6_PROTOCOL,-1
 SERIAL6_BAUD,57
 SERIAL6_OPTIONS,0
 
-# ---------- 2. 链路：TELEM2 -> Orin Nano（机载计算机） ----------
-# MAVLink2 + 921600；线缆只有 TX/RX/GND 时必须关流控，否则完全不通
+# ---------- 2. 链路：TELEM2 -> 数传电台 915（地面站）【2026-09-24 定案，数传占用原 Jetson 口】 ----------
+# MAVLink2 + 9600（机载台串口速率；地面台 57600 各自独立）；线缆只有 TX/RX/GND 时必须关流控
+# Jetson↔飞控现走 USB /dev/cuadc-fc；UART 新口待拍板（TELEM1 候选但须先修回传路径）
 SERIAL2_PROTOCOL,2
-SERIAL2_BAUD,921
+SERIAL2_BAUD,57
 BRD_SER2_RTSCTS,0
 
 # ---------- 3. 失效保护（比赛全程禁止人工操纵，由机载状态机兜底） ----------
@@ -85,23 +88,28 @@ EK3_SRC1_POSZ,1
 EK3_SRC1_VELXY,3
 # 4m 以下激光辅助定高（方案 §3.2："EKF2_RNG_CTRL=1" 为 PX4 参数名，ArduPilot 对应此参数）
 # 依赖下方 MT-01P（RNGFND1）已接通；前提 EK3_SRC1_POSZ=1（气压计为主，激光低空修正）
-# ⚠️ 临时=0：MT-01P 未装机（09-20 定案顶替 TFmini），装机四点比对验收后恢复 4
+# ⚠️ 临时=0：MT-01P 已上机出数（09-24），卷尺四点比对验收后恢复 4
 EK3_RNG_USE_HGT,0
 # 用视觉里程计（VIO）时改为 ExternalNav 并核对 EK3_SRC 相关项：
 # EK3_SRC1_POSXY,6
 # EK3_SRC1_VELXY,6
 
-# ---------- 5b. 微空 MT-01P 激光定高（接 TELEM3 = SERIAL5；09-20 定案顶替 TFmini） ----------
-# 前置：MicoAssistant（USB-TTL）把 MT-01P 切 TFmini 兼容协议再接飞控
-# 串口：协议 11=RangeFinder，波特率 115=115200（TFmini 兼容模式默认）
-SERIAL5_PROTOCOL,11
-SERIAL5_BAUD,115
-# 驱动：20=Benewake 串口系（TFmini 兼容；25 才是 I2C 版勿混；备选 MAVLink=10）
+# ---------- 5b. 微空 MT-01P 激光定高（接 TELEM1 = SERIAL1；09-24 实测定案） ----------
+# MT-01P 出厂默认协议=MAVLink（官方文档：仅 Micolink/MAVLink/MSP 三种，无 TFmini），
+# 即插即用无需微空助手；串口配方 09-24 实测定案 = PROTOCOL 1 + BAUD 115 + OPTIONS 0 + TYPE 10
+# ⚠️ OPTIONS 必须为 0：bit0（值1，出厂默认）实测掐断该口 MAVLink 输入=模块零数据；
+#    bit10（1024，微空文档的"禁转发"）会被 ArduPilot PreArm 拒绝（要求改用 MAV1_OPTIONS bit1，挂账）
+# 09-20~09-23 的「TELEM3 + 切 TFmini + TYPE=20」方案前提有误，作废
+# 09-24 实测：TELEM1 上 14~24Hz 稳定出数
+SERIAL1_PROTOCOL,1
+SERIAL1_BAUD,115
+SERIAL1_OPTIONS,0
+# 驱动：10=MAVLink（MT-01P 默认协议直收；20=TFmini 路线作废；25 才是 I2C 版勿混）
 # 懒加载：RNGFND1_TYPE 写入并重启后，MIN/MAX/GNDCLR 等子参数才会出现 → 需第二遍导入
 # （名字已实测确认：这版固件里 RNGFND1_MIN/MAX 沿用旧命名，单位 m）
-# ⚠️ 临时=0：MT-01P 未装机（09-20 定案；TFmini 时代 09-09 起禁用）；
-# 装机四点比对验收后恢复 20
-RNGFND1_TYPE,0
+RNGFND1_TYPE,10
+# TELEM3(SERIAL5) 随迁空置，导入时还原禁用：
+SERIAL5_PROTOCOL,-1
 RNGFND1_ORIENT,25
 RNGFND1_MIN,0.3
 RNGFND1_MAX,10
@@ -113,7 +121,7 @@ RNGFND1_GNDCLR,0.1
 # ⚠️ 随 X20P 到货同批两遍导入（提前导入无害：GPS2 无设备时 TYPE=2 只是空跑）
 # SERIAL4_BAUD=230 即 230400（X20P 出厂 UBX@230400；本 beta 无 GPS2_BAUD，波特率挂 SERIALx_BAUD）
 # ⚠️ GPS2_TYPE 勿设 3——NMEA 驱动本 beta 已删；X20P 是 UBX 设 2
-# 改正链：X20P 基站→笔记本 MP(RTK Inject)→433 数传→FC→GPS2（见 04 册 §3）
+# 改正链：X20P 基站→笔记本 MP(RTK Inject)→915 数传(TELEM2)→FC→移动端 CAN（09-23 起切 CAN；见 04 册 §3）
 GPS1_TYPE,1
 GPS2_TYPE,2
 SERIAL4_BAUD,230

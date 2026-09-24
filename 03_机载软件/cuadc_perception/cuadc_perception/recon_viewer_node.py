@@ -13,10 +13,8 @@ from cuadc_interfaces.msg import ReconClassification
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-DEFAULT_CLASS_NAMES = [
-    '爆炸品', '不燃气体', '刺激性', '放射性物品', '腐蚀品',
-    '生物危害', '遇湿易燃物品', '有毒品', '自燃物品', '易燃',
-]  # 附件11 实表（2026-09-12 按扫描件逐页比对勘正，页序 = id 序）
+# 类名表与数传填单桥（recon_gcs_bridge_node）同源维护（附件11 实表，09-12 勘正）
+from cuadc_perception.recon_gcs_text import CLASS_NAMES as DEFAULT_CLASS_NAMES
 
 # 终端醒目色（数传终端不支持时退化为普通文本，不影响功能）
 RED = '\033[91m'

@@ -21,7 +21,7 @@
 ## 2. 基站（地面侧）
 
 - 基站操作（09-22 二次修正——上一轮误判为 ArduPilot 配法，实际是 **CUAV 模块内部参数**，见官方系统参数表/手册摘录 §4）：基站角色与收敛全在模块参数——`GPS_TYPE`（0=单点/1=RTK基站/2=RTK流动/17/18=MovingBase）、`GNSS_BASE_MODE`（0=Survey-in/1=固定ECEF/2=固定LLH，收敛后 `GNSS_BASE_LAT/LON/H_CM` 固化复用）、`GNSS_SVIN_ACC_M=3`/`GNSS_SVIN_DUR_S=30`（默认 3.0m/30s，**用 LGC 收紧并记录实际收敛值**，HIT 教训：survey-in 2.49m 勉强过线）、`GNSS_RTK_MSM_VER=16`（出厂即 MSM4 档，与「最小消息集省带宽」决定一致，注入期仍须实测 NAV30）。配置工具=**LGC**（⚠️ UBX 原生配置接口被固件 NAK，u-center/脚本直配不可行；QGC 不支持 X20P、MP 配不了收敛项只做注入；操作手册见同目录 [LGC操作手册.md](LGC操作手册.md)，2026-09-23 立册）；快速路径=**长按 MODE 键**切基站模式（LED 常绿）。官方称默认参数下流动端仍可达 RTK Fixed <1cm。
-- 改正链路（本机定案，与 RTK-01 的 LoRa 自包含架构不同）：**基站 USB Type-C → 地面笔记本 Mission Planner（RTK Inject）→ 433 数传（TELEM1/SERIAL1）→ 飞控 → GPS2 移动端**。零新增无线设备、不再有 900MHz LoRa 频段；代价 = 占数传带宽，注入期间必须实测 NAV30 无 >50ms 空洞（04 册 §3）。
+- 改正链路（本机定案，与 RTK-01 的 LoRa 自包含架构不同；数传段 2026-09-24 对齐）：**基站 USB Type-C → 地面笔记本 Mission Planner（RTK Inject）→ 915 数传（TELEM2/SERIAL2）→ 飞控 → 移动端（09-23 起切 CAN 总线，GPS2/SERIAL4 为旧口径随 SSOT §3.2 改写清理）**。零新增无线设备、不再有 900MHz LoRa 频段；代价 = 占数传带宽，注入期间必须实测 NAV30 无 >50ms 空洞（04 册 §3）。
 - 架设纪律：天线架高 1.5~2m、天顶开阔、远离反射面（多径是 Fix 收敛第一杀手）；survey-in 完成后**全程禁动**；**基站卡必建**（坐标来源 / 天线参考点 / 天线高 / 日期 / MSM 配置 / 允许架设位），换场地重新 survey-in。
 
 ## 3. 移动端（机载流动站）
@@ -37,7 +37,7 @@
 | --- | --- |
 | 物理接口 | 移动端 UART2 6P → V6X GPS2/SERIAL4（6P 对 6P 用 4 线，PPS/EVENTA 悬空；接线卡 02 册 §9.3）；基站 USB → 地面笔记本 |
 | 飞控参数 | `GPS2_TYPE=2`、`SERIAL4_BAUD=230`、`GPS_AUTO_SWITCH=1`、`GPS2_AUTO_CONFIG=0`、`SERIAL4_PROTOCOL=5`（随到货同批两遍导入）；`GPS_BLEND` 暂关 |
-| 改正链 | 基站 → MP → 433 数传 → FC → 移动端（RTCM3X，MSM4 最小消息集） |
+| 改正链 | 基站 → MP → 915 数传（TELEM2，09-24 对齐）→ FC → 移动端（RTCM3X，MSM4 最小消息集；移动端 09-23 起走 CAN） |
 | 罗盘 | 不用 RM3100；主罗盘仍 NEO-3 IST8310 |
 | 刷新率 | 出厂 5Hz（`GNSS_RATE_MS=200ms`）；**飞行维持 5Hz**（官方 ArduPilot 指南即按 5Hz 给参，无改率要求）；25Hz 仅作台架吞吐验证（LGC 设 40ms→复测→回归 200ms，UBX 直配被固件 NAK） |
 | 验收 | 04 册 §3 验收分级 + 转正门槛（四组测试 / 带宽 / 静态对比） |

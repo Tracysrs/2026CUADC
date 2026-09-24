@@ -1775,7 +1775,7 @@ private:
   /// 返回 true 表示 future 已被超时清理，调用方跳过本轮结果检查。
   template<typename SrvT>
   bool service_timed_out(rclcpp::Client<SrvT> & client,
-    const rclcpp::Client<SrvT>::SharedFuture & future,
+    const typename rclcpp::Client<SrvT>::SharedFuture & future,
     int64_t & request_id, const rclcpp::Time & sent_at, const char * name)
   {
     if (!future.valid() ||

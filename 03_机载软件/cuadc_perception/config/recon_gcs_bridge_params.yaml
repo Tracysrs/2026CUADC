@@ -1,0 +1,12 @@
+# 判读→数传填单桥参数（recon_gcs_bridge_node）
+# 链路：/cuadc/recon/classification → /mavros/statustext/send → FC→TELEM2(@9600)→915→MP 消息栏
+# 04 册 §2.4 填单主通道 Jetson 侧源头；文本格式/去重语义见 cuadc_perception/recon_gcs_text.py
+/**:
+  ros__parameters:
+    classification_topic: /cuadc/recon/classification
+    statustext_topic: /mavros/statustext/send
+    # 附件11 实表（09-12 勘正，页序 = id 序，勿用标准 GHS 表）；
+    # 与训练集 data.yaml、recon_viewer_node 三处同源，改训练集必须同步
+    class_names: [爆炸品, 不燃气体, 刺激性, 放射性物品, 腐蚀品,
+                  生物危害, 遇湿易燃物品, 有毒品, 自燃物品, 易燃]
+    dedupe: true   # 同窗同结论只发一次；改判/新窗自动重发

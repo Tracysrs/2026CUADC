@@ -94,7 +94,7 @@ CUAV V6X（ArduPilot 4.7-beta）+ ZD550 四轴的调试脚本集，2026-09-05 �
 | 脚本（命令） | 端 | 调试什么 |
 |---|---|---|
 | `fc_log_pull.py`（`log`） | Jetson | mavftp 拉 SD 卡日志：`list` 列目录 / `get 名字` 拉取。正式拉取用 `python3 -m pymavlink.mavftp` CLI（`--burst_read_size 239`）；Windows 侧 CLI 两坑（`--baudrate` 须独立、`MSYS_NO_PATHCONV=1`）见 06 册 11 卷 §5 |
-| `log_hover_check.py`（无 ops 命令） | 双端 | dataflash 离线分析（只读不动飞控）：离地窗口的姿态 / 四电机 PWM 平衡 / 振动 / 罗盘 / GPS 一页报告。调试「飞姿异常归因」（如左倾 = 机械不平 / 推力不平衡 / 操纵补偿），`python log_hover_check.py <日志.BIN>` |
+| `log_hover_check.py`（无 ops 命令） | 双端 | dataflash 离线分析（只读不动飞控）：离地窗口的姿态 / 四电机 PWM 平衡 / 振动 / 罗盘 / GPS 一页报告。调试「飞姿异常归因」（如左倾 = 机械不平 / 推力不平衡 / 操纵补偿），`python log_hover_check.py <日志.BIN>`；加 `--fft` 附发 IMU 角速度频谱+峰频表（纯 Python FFT，低频段振荡/整定前后对比用；电机段陷波定频用 MP 日志 FFT，见 03 册 §2.10） |
 
 ## 11. 台架联测（带电投放记录）
 

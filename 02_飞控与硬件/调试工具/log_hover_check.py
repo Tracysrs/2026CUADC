@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """dataflash 悬停/倾斜检查：离地窗口的姿态、四电机 PWM 平衡、振动、罗盘、GPS 一页报告。
 
-用法: python log_hover_check.py <日志.BIN> [离地阈值米，默认0.3]
-只读分析，不动飞控。结论供左倾/右倾归因（机械不平/推力不平衡/操纵补偿）参考。
+用法: python log_hover_check.py <日志.BIN> [离地阈值米，默认0.3] [--fft]
+只读分析，不动飞控。结论供左倾/右倾归因（机械不平/推力不平衡/操纵补偿）参考；
+--fft 加发悬停窗口 IMU 角速度频谱与峰频表（陷波定频用，方法见 06 册 03 卷 §2.10）。
 """
 
 import math
@@ -31,13 +32,102 @@ def stats(v):
     return mean, math.sqrt(var), min(v), max(v), n
 
 
+def _fft(re, im):
+    """原地 radix-2 FFT（长度须为 2 的幂）；纯标准库，避免引入 numpy 依赖。"""
+    n = len(re)
+    j = 0
+    for i in range(1, n):
+        bit = n >> 1
+        while j & bit:
+            j ^= bit
+            bit >>= 1
+        j |= bit
+        if i < j:
+            re[i], re[j] = re[j], re[i]
+            im[i], im[j] = im[j], im[i]
+    length = 2
+    while length <= n:
+        half = length // 2
+        ang = -2.0 * math.pi / length
+        wr = math.cos(ang)
+        wi = math.sin(ang)
+        for start in range(0, n, length):
+            cr = 1.0
+            ci = 0.0
+            for k in range(start, start + half):
+                kr = k + half
+                vr = re[kr] * cr - im[kr] * ci
+                vi = re[kr] * ci + im[kr] * cr
+                re[kr] = re[k] - vr
+                im[kr] = im[k] - vi
+                re[k] += vr
+                im[k] += vi
+                ncr = cr * wr - ci * wi
+                ci = cr * wi + ci * wr
+                cr = ncr
+        length <<= 1
+
+
+def gyro_fft_report(imu, t_in, t_out):
+    """电机窗口的 IMU 角速度频谱：每轴 RMS + 前 5 个显著峰。
+
+    默认日志 IMU 流只有几十 Hz（角速度字段 rad/s）——本报告覆盖 Nyquist 以内的
+    低频段（控制振荡/结构晃动判读）；电机基频段陷波定频需全速率批采样
+    （ISBH/ISBD，未开启时用 MP 日志 FFT）。
+    """
+    rows = [x for x in imu if x[0] is not None and t_in <= x[0] <= t_out
+            and x[1] is not None]
+    if len(rows) < 256:
+        print("频谱: 无 IMU/Gyr 数据，--fft 跳过（退回 VIBE/Clip 粗判）")
+        return
+    n = 1 << (min(len(rows), 16384).bit_length() - 1)
+    rows = rows[:n]
+    ts = [x[0] for x in rows]
+    span = ts[-1] - ts[0]
+    if span <= 0:
+        print("频谱: 时间戳无有效跨度，--fft 跳过")
+        return
+    fs = (len(ts) - 1) / span
+    labels = ("GyrX(roll)", "GyrY(pitch)", "GyrZ(yaw)")
+    print(f"\n频谱（--fft）：电机窗口 {span:.1f}s，取 {n} 点，"
+          f"fs≈{fs:.0f}Hz（Nyquist {fs / 2:.0f}），Hann 窗，rad/s 已转 °/s 峰值")
+    for ax in range(3):
+        xs = [x[1 + ax] * 57.29578 for x in rows]
+        mean = sum(xs) / n
+        re = [(v - mean) * 0.5 * (1 - math.cos(2 * math.pi * i / (n - 1)))
+              for i, v in enumerate(xs)]
+        im = [0.0] * n
+        _fft(re, im)
+        spec = [math.hypot(re[k], im[k]) * 4.0 / n for k in range(1, n // 2)]
+        rms = math.sqrt(sum((v - mean) ** 2 for v in xs) / n)
+        peaks = []
+        for k in range(2, len(spec) - 1):
+            if spec[k] > spec[k - 1] and spec[k] >= spec[k + 1] and spec[k] > 0.05:
+                peaks.append((spec[k], k))
+        peaks.sort(reverse=True)
+        picked = []
+        for amp, k in peaks:
+            f = k * fs / n
+            if all(abs(f - p[0]) > 2.0 for p in picked):
+                picked.append((f, amp))
+            if len(picked) == 5:
+                break
+        ps = "  ".join(f"{f:.1f}Hz({a:.2f})" for f, a in picked) or "无显著峰"
+        print(f"  {labels[ax]}: RMS {rms:.2f}°/s | 峰: {ps}")
+    print(f"  读法：本频段（≤{fs / 2:.0f}Hz）判控制振荡/结构晃动与整定前后对比；"
+          "电机基频陷波定频超出默认日志流，用 MP 日志 FFT（全速率）")
+
+
 def main():
-    path = sys.argv[1]
-    alt_th = float(sys.argv[2]) if len(sys.argv) > 2 else 0.3
+    args = [a for a in sys.argv[1:] if a != "--fft"]
+    want_fft = len(args) != len(sys.argv) - 1
+    path = args[0]
+    alt_th = float(args[1]) if len(args) > 1 else 0.3
     mlog = DFReader_binary(path)
 
     att, ctun, rcou, rcin = [], [], [], []
     vibe, mags, gps, modes, ev, msgs, errs = [], [], [], [], [], [], []
+    gyro = []
     t0_log = None
     while True:
         m = mlog.recv_match()
@@ -56,6 +146,9 @@ def main():
             rcou.append((rel, m.C1, m.C2, m.C3, m.C4))
         elif ty == "RCIN":
             rcin.append((rel, m.C1, m.C2, m.C3, m.C4))
+        elif ty == "IMU":
+            gyro.append((rel, getattr(m, "GyrX", None), getattr(m, "GyrY", None),
+                         getattr(m, "GyrZ", None)))
         elif ty == "VIBE":
             vibe.append((rel, m.IMU, m.VibeX, m.VibeY, m.VibeZ, m.Clip))
         elif ty == "MAG":
@@ -146,6 +239,8 @@ def main():
             clip = max(r[5] for r in rows)
             print(f"振动 IMU{imu}: |Vibe| 峰 {max(abs(vx[2]),abs(vx[3]),abs(vx[4])):.2f} m/s/s"
                   f"（>30 异常） Clip 累计 {clip:.0f}（>0 即 IMU 削波）")
+    if want_fft:
+        gyro_fft_report(gyro, t_in, t_out)
     for inst in ("MAG1", "MAG2", "MAG3"):
         mm = [x for x in mags if x[1] == inst]
         if mm:

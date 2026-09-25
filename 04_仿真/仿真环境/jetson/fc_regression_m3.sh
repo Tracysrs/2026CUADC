@@ -14,6 +14,9 @@
 #   [4/4] fc_sitl_m3.sh 全任务判分（最长 420s，结束自动打分）
 # 判据（全部满足才 REGRESSION PASS）：
 #   colcon 无 error；单测全绿；投放 2/2 全 A 区；总时长 ≤180s
+# 修复 2026-09-25 首跑死锁：stage3/4 原用 "| tail/tee" 接输出，但 reset_sim/fc_sitl_m3
+#   拉起的守护子进程（SITL 的 sleep infinity 管道树/gz/mavros）继承管道写端永不关闭，
+#   tail 等不到 EOF 整脚本卡死（bash -n 查不出的运行时缺陷）——改为输出落文件、结束后 tail。
 # =============================================================================
 set -o pipefail
 LOG=/tmp/cuadc_regression_$(date +%m%d_%H%M%S)
@@ -50,14 +53,19 @@ if [ "$FAIL" -ne 0 ]; then
   exit 1
 fi
 
-echo "[3/4] 全栈重置（reset_sim.sh，约 40s）"
-if ! bash "$HOME/sim_scripts/reset_sim.sh" 2>&1 | tail -3; then
-  echo "REGRESSION FAIL: reset_sim 失败"
+echo "[3/4] 全栈重置（reset_sim.sh，约 40s；输出落 $LOG/reset_sim.txt）"
+if ! bash "$HOME/sim_scripts/reset_sim.sh" >"$LOG/reset_sim.txt" 2>&1; then
+  echo "REGRESSION FAIL: reset_sim 失败（$LOG/reset_sim.txt 末 5 行：）"
+  tail -5 "$LOG/reset_sim.txt"
   exit 1
 fi
+tail -3 "$LOG/reset_sim.txt"
 
-echo "[4/4] SITL M3 全任务判分（最长 420s，结束自动打分）"
-bash "$HOME/sim_scripts/fc_sitl_m3.sh" 420 2>&1 | tee "$LOG/m3.txt" | tail -12
+echo "[4/4] SITL M3 全任务判分（最长 420s，结束自动打分；输出落 $LOG/m3.txt）"
+if ! bash "$HOME/sim_scripts/fc_sitl_m3.sh" 420 >"$LOG/m3.txt" 2>&1; then
+  echo "⚠️ fc_sitl_m3 退出码非 0（$LOG/m3.txt 末 15 行：）"
+fi
+tail -15 "$LOG/m3.txt"
 
 # ---- 自动判定（判据与 fc_sitl_m3 输出口径对齐）----
 PASS=1

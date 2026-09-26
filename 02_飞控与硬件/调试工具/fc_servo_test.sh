@@ -80,14 +80,12 @@ timeout 25 ros2 service call /mavros/cmd/command mavros_msgs/srv/CommandLong \
 sleep 1
 
 echo "[3] PWM 时序（收拢 $STOW / 释放 $RELEASE，留意舵机仲裁方向）"
-echo "  ① 中位 1500:  $(do_servo 1500)"; sleep 2
-echo "  ② 收拢 $STOW:  $(do_servo $STOW)"; sleep 2
-echo "  ③ 释放 $RELEASE（投放!）: $(do_servo $RELEASE)"; sleep 1.2
-echo "  ④ 回仓 $STOW:  $(do_servo $STOW)"; sleep 2
-echo "  ⑤ 复投 $RELEASE: $(do_servo $RELEASE)"; sleep 1.2
-echo "  ⑥ 回仓 $STOW:  $(do_servo $STOW)"; sleep 1.5
-echo "  ⑦ 归中 1500:  $(do_servo 1500)"; sleep 1
+echo "  ① 收拢 $STOW:  $(do_servo $STOW)"; sleep 2
+echo "  ② 释放 $RELEASE（投放!）: $(do_servo $RELEASE)"; sleep 1.2
+echo "  ③ 回仓 $STOW:  $(do_servo $STOW)"; sleep 2
+echo "  ④ 复投 $RELEASE: $(do_servo $RELEASE)"; sleep 1.2
+echo "  ⑤ 收位 $STOW（09-26 改：纯收拢-释放-收拢时序，去中位 1500，以收拢位收尾挂瓶安全态）:  $(do_servo $STOW)"; sleep 1
 
 echo "=== 完成，日志: $LOG ==="
-echo "判读：⑤⑥ 之间舵机应两次到达释放位；若无动作依次查 BEC 5V、共地、S 针对位"
+echo "判读：②④ 两次释放位动作应可见；若无动作依次查 BEC 6V 输出、共地、S 针对位"
 exit 0

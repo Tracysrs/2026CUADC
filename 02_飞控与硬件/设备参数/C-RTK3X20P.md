@@ -35,10 +35,10 @@
 
 | 项 | 定案 |
 | --- | --- |
-| 物理接口 | 移动端 UART2 6P → V6X GPS2/SERIAL4（6P 对 6P 用 4 线，PPS/EVENTA 悬空；接线卡 02 册 §9.3）；基站 USB → 地面笔记本 |
-| 飞控参数 | `GPS2_TYPE=2`、`SERIAL4_BAUD=230`、`GPS_AUTO_SWITCH=1`、`GPS2_AUTO_CONFIG=0`、`SERIAL4_PROTOCOL=5`（随到货同批两遍导入）；`GPS_BLEND` 暂关 |
+| 物理接口 | 主路线：移动端 CAN 4P → V6X CAN1（DroneCAN，09-23 起）；备用：UART2 6P → V6X GPS2/SERIAL4（6P 对 6P 用 4 线，PPS/EVENTA 悬空；接线卡 02 册 §9.3）；基站 USB → 地面笔记本 |
+| 飞控参数 | 主路线四钥匙（CUAV 官方配方，09-23 落机、09-25 实机审计全对）：`CAN_P1_DRIVER=1` / `CAN_D1_PROTOCOL=1` / `GPS1_TYPE=9` / `GPS_AUTO_CONFIG=2`；`GPS_AUTO_SWITCH=1`（单 GPS 下与 0 等价）；`GPS1_POS_X/Y/Z` 天线偏移待装机实测回填。备用 UART 口径：`GPS2_TYPE=2` + `SERIAL4_BAUD=230` + `SERIAL4_PROTOCOL=5` + `GPS2_AUTO_CONFIG=0`（AP<4.8 需关自动配置，本 beta 适用）；`GPS_BLEND` 暂关 |
 | 改正链 | 基站 → MP → 915 数传（TELEM2，09-24 对齐）→ FC → 移动端（RTCM3X，MSM4 最小消息集；移动端 09-23 起走 CAN） |
-| 罗盘 | 不用 RM3100；主罗盘仍 NEO-3 IST8310 |
+| 罗盘 | 模块 RM3100 随 CAN 在位即候选（09-23 拍板升主罗盘挂账，前置=LGC 检查 + COMPASS_TYPEMASK 勿排除 DroneCAN 位）；现役=双板载 RM3100（09-25 单RTK 定案，NEO-3 已拔除转台架备份） |
 | 刷新率 | 出厂 5Hz（`GNSS_RATE_MS=200ms`）；**飞行维持 5Hz**（官方 ArduPilot 指南即按 5Hz 给参，无改率要求）；25Hz 仅作台架吞吐验证（LGC 设 40ms→复测→回归 200ms，UBX 直配被固件 NAK） |
 | 验收 | 04 册 §3 验收分级 + 转正门槛（四组测试 / 带宽 / 静态对比） |
 

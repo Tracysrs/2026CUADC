@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
-# 真飞控干跑：CUAV V6X 经 USB(/dev/cuadc-fc) 接 Jetson，验证链路 + 状态机推进
+# 真飞控干跑：CUAV V6X 经 TELEM3 串口(/dev/ttyTHS1, 09-26 定案主链)接 Jetson，验证链路 + 状态机推进
+# （USB /dev/cuadc-fc 降备份：存在才用；FCU_URL 环境变量仍可强制覆盖）
 # 安全约束：无桨作业；不发送任何 arm 指令（auto_arm 默认 false，仅观察 PreArm）
 # 用法：bash fc_dryrun.sh [干跑秒数，默认 90]   日志：/tmp/cuadc_fc_dryrun_*/
 # =============================================================================
@@ -13,10 +14,18 @@ mkdir -p "$LOG"
 source /opt/ros/humble/setup.bash
 # shellcheck disable=SC1091
 source "$HOME/cuadc_ws/install/setup.bash"
-FCU="${FCU_URL:-/dev/cuadc-fc:115200}"
+# 设备选择（09-26 勘正）：TELEM3 主链 → USB 备份 → FCU_URL 环境变量最高优先
+if [ -n "$FCU_URL" ]; then
+  FCU="$FCU_URL"
+elif [ -e /dev/ttyTHS1 ]; then
+  FCU="/dev/ttyTHS1:921600"
+else
+  FCU="/dev/cuadc-fc:115200"
+fi
 
-echo "[0] 设备: $(ls -l /dev/cuadc-fc 2>/dev/null || echo 缺失)"
-[ -e /dev/cuadc-fc ] || { echo "错误：/dev/cuadc-fc 不存在"; exit 1; }
+echo "[0] 设备: ${FCU}（ttyTHS1=$(ls -l /dev/ttyTHS1 2>/dev/null | awk '{print $NF}')，cuadc-fc=$(ls -l /dev/cuadc-fc 2>/dev/null | awk '{print $NF}'))"
+DEV="${FCU%%:*}"
+[ -e "$DEV" ] || { echo "错误：设备 $DEV 不存在（TELEM3 串口与 USB 均未枚举）"; exit 1; }
 
 echo "[1] 启动 mavros（$FCU）+ GCS 心跳泵（tcp-l:14550）"
 ros2 launch mavros apm.launch fcu_url:="$FCU" gcs_url:=tcp-l://0.0.0.0:14550 \

@@ -1,0 +1,2 @@
+# SERIAL3 波特率试 38400（NEO-3 出厂值）
+SERIAL3_BAUD,38

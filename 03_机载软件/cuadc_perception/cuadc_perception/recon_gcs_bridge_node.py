@@ -19,8 +19,8 @@
 
 用法（Jetson，前置 = mavros 已起、判读服务在跑）：
   ros2 launch cuadc_perception recon_gcs_bridge.launch.py
-systemd 化未拍板（同 camera_node 待遇）：比赛日手工拉起，或待拍板并入
-cuadc_start_perception.sh。地面局域网内仍可跑 recon_viewer_node 看彩色判读表，
+已并入 cuadc_start_perception.sh 随感知服务自启（09-26 拍板，真三跳验收后落
+地；手工拉起仅调试用）。地面局域网内仍可跑 recon_viewer_node 看彩色判读表，
 本桥是数传路径的等价物，两者可并存。
 """
 

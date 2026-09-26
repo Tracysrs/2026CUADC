@@ -3,7 +3,7 @@
 import time
 from pymavlink import mavutil
 
-master = mavutil.mavlink_connection("COM5", baud=115200, timeout=5)
+master = mavutil.mavlink_connection("COM17", baud=115200, timeout=5)
 hb = master.wait_heartbeat(timeout=15)
 print(f"已连接，载具: {mavutil.mavlink.enums['MAV_TYPE'][hb.type].name}")
 

@@ -3,7 +3,8 @@
 #       若日后用 Mission Planner 重新做遥控校准，以新标定为准。
 # RC3_TRIM 按 ArduPilot 规范取 RC3_MIN（旧板备份误为 1999 校准残留，不照搬）；
 # RC_OPTIONS=32 = bit5「解锁要求油门在怠速位」（旧板沿用，安全项，含义查证 ardupilot.org RC Options 文档）；
-# CH5=飞行模式（SWA 三段 1100/1500/1900）、CH6=急停（SWC，RC6_OPTION=31 见基线文件 §3b）。
+# CH5=飞行模式（SWC 三段 1100/1500/1900）、CH6=急停（SWA 两段，RC6_OPTION=31 见基线文件 §3b）。
+# 2026-09-25 按实物勘正开关名：FS-i6 出厂 SWA 两挡、SWB/SWC 三挡，旧文 SWA/SWC 写反（RC 值不受影响）。
 RC_OPTIONS,32
 FLTMODE_CH,5
 RC1_MIN,1005

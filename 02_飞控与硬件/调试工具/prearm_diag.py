@@ -10,7 +10,7 @@
   - 参数门限：ARMING_CHECK / BATT_ARM_VOLT / BRD_SAFETY_ENABLE / FS_THR_ENABLE / AHRS_GPS_USE
   - 期间收到的 STATUSTEXT（ArduPilot 周期性 PreArm 提示会出现在这里）
 
-用法: python prearm_diag.py [COM口，默认 COM5]
+用法: python prearm_diag.py [COM口，缺省自动认端口描述扫描 "ArduPilot MAVLink"]
 """
 
 import math
@@ -18,6 +18,34 @@ import sys
 import time
 
 from pymavlink import mavutil
+from serial.tools import list_ports
+
+
+def pick_port():
+    """缺省自动认口：按 README 口径认端口描述不认号（飞控 = "ArduPilot MAVLink"）"""
+    cands = [p for p in list_ports.comports() if "ardupilot mavlink" in p.description.lower()]
+    if len(cands) == 1:
+        return cands[0].device
+    if not cands:
+        sys.exit("错误：没扫到描述为 \"ArduPilot MAVLink\" 的口——飞控没插/驱动没起，"
+                 "或用 python prearm_diag.py COM17 手动指定。\n"
+                 "当前在位: " + " | ".join(f"{p.device}({p.description})" for p in list_ports.comports()))
+    return cands[0].device
+
+
+def connect(port):
+    try:
+        m = mavutil.mavlink_connection(port, baud=115200, timeout=5)
+        hb = m.wait_heartbeat(timeout=15)
+        if hb is None:
+            sys.exit(f"错误：{port} 已打开但未收到心跳")
+        return m, hb
+    except Exception as e:
+        msg = str(e)
+        hint = ("——口被别的程序占了（Mission Planner/LGC 会占 COM 口，先断开它们再跑）"
+                if "PermissionError" in msg or "拒绝访问" in msg else "——口不存在或驱动未起")
+        sys.exit(f"错误：连不上 {port} {hint}\n"
+                 "当前在位: " + " | ".join(f"{p.device}({p.description})" for p in list_ports.comports()))
 
 COPTER_MODES = {
     0: "STABILIZE", 1: "ACRO", 2: "ALT_HOLD", 3: "AUTO", 4: "GUIDED",
@@ -39,11 +67,9 @@ def field_norm(msg):
 
 
 def main():
-    port = sys.argv[1] if len(sys.argv) > 1 else "COM5"
-    m = mavutil.mavlink_connection(port, baud=115200, timeout=5)
-    hb = m.wait_heartbeat(timeout=15)
-    if hb is None:
-        sys.exit("错误：未收到心跳")
+    port = sys.argv[1] if len(sys.argv) > 1 else pick_port()
+    print(f"连接 {port} ...")
+    m, hb = connect(port)
     armed = bool(hb.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
     mode = COPTER_MODES.get(hb.custom_mode, f"未知({hb.custom_mode})")
 
@@ -124,20 +150,29 @@ def main():
     else:
         print("EKF:  无数据")
 
-    if imu1 and imu2:
-        n1 = sorted(imu1)[len(imu1) // 2]
-        n2 = sorted(imu2)[len(imu2) // 2]
+    # 罗盘一致性需两路都有数：某路全 0 = 该路罗盘不在（如 NEO-3 已拔除），
+    # 拿 0 比对会把差值顶成整机模长造成假 ⛔（09-25 实测踩坑），故按单罗盘处理
+    n1 = sorted(imu1)[len(imu1) // 2] if imu1 else 0
+    n2 = sorted(imu2)[len(imu2) // 2] if imu2 else 0
+    if n1 > 0 and n2 > 0:
         diff = abs(n1 - n2)
-        print(f"罗盘: 内置 {n1:.0f} mG | 外置 {n2:.0f} mG | 模长差 {diff:.0f} mG")
+        print(f"罗盘: 内置 {n1:.0f} mG | 第二路 {n2:.0f} mG | 模长差 {diff:.0f} mG")
         if diff > 150:
             print("  ⛔ 罗盘一致性超差（>150 mG）→ 校准罗盘/远离磁干扰")
         if not (80 < n1 < 850):
             print("  ⛔ 磁场模长超出合理范围（80~850 mG）→ 罗盘数据异常")
+    elif n1 > 0:
+        print(f"罗盘: 单路 {n1:.0f} mG（第二路无数据，跳过一致性比对；"
+              "板载主罗盘健康即可飞，见 09-24 首飞）")
+        if not (80 < n1 < 850):
+            print("  ⛔ 磁场模长超出合理范围（80~850 mG）→ 罗盘数据异常")
     else:
-        print("罗盘: 数据不足（内置/外置至少一路无报文）")
+        print("罗盘: 无数据 ⛔（没有任何罗盘出报文）")
 
-    print("参数: " + " | ".join(f"{k}={v:g}" for k, v in sorted(params.items()))
-          or "参数: 未取到")
+    if params:
+        print("参数: " + " | ".join(f"{k}={v:g}" for k, v in sorted(params.items())))
+    else:
+        print("参数: 未取到")
 
     if st:
         print("\nSTATUSTEXT（近10s）:")

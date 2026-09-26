@@ -11,7 +11,7 @@
 #     BRD_SAFETY_DEFLT（装机完成后恢复 1）
 #     （EK3_RNG_USE_HGT=4 已于 09-24 激活持久化：卷尺四点比对通过——线性差 1.4cm/绝对 2.6~4.0cm；
 #       RNGFND1_TYPE 同日定案 10=MAVLink 直收 MT-01P，14~24Hz 出数，均非临时值）
-#   §5c GPS 段为 09-20 新增：GPS2=C-RTK 3 X20P 流动站，随到货同批导入（提前导入无害）
+#   §5c GPS 段已按 09-25 单RTK CAN 终态实机审计改写（GPS1=X20P@CAN 四钥匙；GPS2 空口备用）
 #   ⚠️ V6X v1 与 v2 载板通用但固件互不兼容，切勿刷 Pixhawk6X（v1）稳定版
 # 导入方式：Mission Planner -> 配置/调试 -> 全参数树 -> 载入参数 -> 写入后重启 -> 再载入一遍 -> 再重启
 # 注意：导入前先在原机上"保存参数到文件"做备份（已有 param_backup_*.param 可用）
@@ -43,10 +43,25 @@ SERIAL6_OPTIONS,0
 
 # ---------- 2. 链路：TELEM2 -> 数传电台 915（地面站）【2026-09-24 定案，数传占用原 Jetson 口】 ----------
 # MAVLink2 + 9600（机载台串口速率；地面台 57600 各自独立）；线缆只有 TX/RX/GND 时必须关流控
-# Jetson↔飞控现走 USB /dev/cuadc-fc；UART 新口待拍板（TELEM1 候选但须先修回传路径）
+# Jetson↔飞控已定案走 ETH 网口直连（见 §2b，2026-09-25 拍板）；USB /dev/cuadc-fc 降级为备份链路
 SERIAL2_PROTOCOL,2
 SERIAL2_BAUD,57
 BRD_SER2_RTSCTS,0
+
+# ---------- 2b. ETH 网口（Jetson 机载电脑直连；2026-09-25 定案，参数已落机回读全 PASS） ----------
+# 拓扑：飞控 ETH(4Pin JST-GH) --网线--> Jetson enP8p1s0(192.168.144.15/24 静态，nmcli fc-eth)
+# Jetson 侧 mavros：FCU_URL=udp://192.168.144.14:14550（飞控为 UDP 服务器，Jetson 主动发起）
+# 修改 NET_* 后须重启生效；懒加载：NET_ENABLE=1 重启前其余 NET 参数不可见 → 需两遍导入
+NET_ENABLE,1
+NET_DHCP,0
+NET_IPADDR0,192
+NET_IPADDR1,168
+NET_IPADDR2,144
+NET_IPADDR3,14
+NET_NETMASK,24
+NET_P1_TYPE,2
+NET_P1_PROTOCOL,2
+NET_P1_PORT,14550
 
 # ---------- 3. 失效保护（比赛全程禁止人工操纵，由机载状态机兜底） ----------
 # 数传断链不动作：断链只影响"地面看数据"，不能让飞机自己乱飞
@@ -60,13 +75,15 @@ FS_THR_ENABLE,5
 # 省 ¥300+（省下的预算买反火花总开关，规则2.3"人工切断动力安全开关"载体）
 # 接线：iA6B 的 PPM/CH1 → PPM IN 专用口（⚠️ 针序镜像：飞控中间针是信号，见 09-09 日志）
 # 通道规划：
-#   CH5 = 飞行模式（固件默认 FLTMODE_CH=5，遥控器 SWA 三段对应）
-#   CH6 = 急停（遥控器 SWC 两段对应）
+#   CH5 = 飞行模式（遥控器 SWC 三段对应：Stabilize/AltHold/Loiter）
+#   CH6 = 急停（遥控器 SWA 两段对应；2026-09-25 按实物勘正：FS-i6 出厂 SWA 两挡、SWB/SWC 三挡，旧文 SWA/SWC 写反）
 # 比赛上场 FS_THR_ENABLE 改 0（见 §3），CH6 急停拨杆即细则 5.8 的"紧急停止"
 # ⚠️ 遥控器端 failsafe 必须设 No pulses（RX SETUP → FAILSAFE；出厂"保持"会掩盖断链）
 RC6_OPTION,31
+# FLTMODE_CH 固件默认即 5，2026-09-25 实机审计后显式化入账（防默认值变化翻车）
+FLTMODE_CH,5
 # 2026-09-11 已随基线导入并回读验证（两遍+重启+diff 全一致）；剩余动作只有遥控器端：
-# SWC 拨杆分配到 CH6 + iA6B failsafe 改 No pulses
+# SWC 拨杆分配到 CH5（三段模式）+ SWA 拨杆分配到 CH6（急停）+ iA6B failsafe 改 No pulses
 
 # ---------- 4. 运动限制（新固件参数名，单位 m/s；旧 WPNAV_*/GUIDS_* 命名已废除） ----------
 # 自动/GUIDED 巡航 4 m/s；上升 3 m/s；下降 1.5 m/s（旧名 WPNAV_SPEED,400 等）
@@ -98,18 +115,27 @@ EK3_RNG_USE_HGT,4
 # MT-01P 出厂默认协议=MAVLink（官方文档：仅 Micolink/MAVLink/MSP 三种，无 TFmini），
 # 即插即用无需微空助手；串口配方 09-24 实测定案 = PROTOCOL 1 + BAUD 115 + OPTIONS 0 + TYPE 10
 # ⚠️ OPTIONS 必须为 0：bit0（值1，出厂默认）实测掐断该口 MAVLink 输入=模块零数据；
-#    bit10（1024，微空文档的"禁转发"）会被 ArduPilot PreArm 拒绝（要求改用 MAV1_OPTIONS bit1，挂账）
+#    bit10（1024，微空文档的"禁转发"）曾被误写入实机（09-25 审计发现，激光虽仍出数但按官方
+#    口径属 PreArm 拒绝值）——09-25 已写回 0 并重启持久化验证；禁转发由 MAV1_OPTIONS bit1 承担
 # 09-20~09-23 的「TELEM3 + 切 TFmini + TYPE=20」方案前提有误，作废
 # 09-24 实测：TELEM1 上 14~24Hz 稳定出数
 SERIAL1_PROTOCOL,1
 SERIAL1_BAUD,115
 SERIAL1_OPTIONS,0
+# MAVLink 实例 1（=SERIAL1）选项：bit1=NO_FORWARD、bit4=UNICAST——意图挡 MT-01P 双流转发，
+# 但本 beta 两位实测均不生效（09-25/26 收官：=2 与 =18 洪水照旧），洪水治理改走模块侧降频；
+# 位保留无害，实机维持=2
+MAV1_OPTIONS,2
 # 驱动：10=MAVLink（MT-01P 默认协议直收；20=TFmini 路线作废；25 才是 I2C 版勿混）
 # 懒加载：RNGFND1_TYPE 写入并重启后，MIN/MAX/GNDCLR 等子参数才会出现 → 需第二遍导入
 # （名字已实测确认：这版固件里 RNGFND1_MIN/MAX 沿用旧命名，单位 m）
 RNGFND1_TYPE,10
-# TELEM3(SERIAL5) 随迁空置，导入时还原禁用：
-SERIAL5_PROTOCOL,-1
+# TELEM3(SERIAL5) 09-26 起为 Jetson Orin 40pin UART 主链（环回+外转验收全绿，判读链复活）：
+# BAUD=921 即 921600（Jetson 历史口径）；流控关=杜邦线无 CTS/RTS，auto 档遇悬空会停 TX
+SERIAL5_PROTOCOL,2
+SERIAL5_BAUD,921
+SERIAL5_OPTIONS,0
+BRD_SER5_RTSCTS,0
 RNGFND1_ORIENT,25
 RNGFND1_MIN,0.3
 RNGFND1_MAX,10
@@ -117,15 +143,20 @@ RNGFND1_SCALING,1
 # 飞机着陆时传感器离地高度（按实际安装高度改）
 RNGFND1_GNDCLR,0.1
 
-# ---------- 5c. GPS/RTK（GPS1=NEO-3 不变；GPS2=C-RTK 3 X20P 流动站，09-20 定案） ----------
-# ⚠️ 随 X20P 到货同批两遍导入（提前导入无害：GPS2 无设备时 TYPE=2 只是空跑）
-# SERIAL4_BAUD=230 即 230400（X20P 出厂 UBX@230400；本 beta 无 GPS2_BAUD，波特率挂 SERIALx_BAUD）
-# ⚠️ GPS2_TYPE 勿设 3——NMEA 驱动本 beta 已删；X20P 是 UBX 设 2
+# ---------- 5c. GPS/RTK（单RTK CAN 终态：GPS1=C-RTK 3 X20P@CAN；2026-09-22 拍板、09-23 四钥匙落机、09-25 实机审计入账） ----------
+# 四钥匙：CAN_P1_DRIVER=1（§7b 已有）/ CAN_D1_PROTOCOL=1 / GPS1_TYPE=9 / GPS_AUTO_CONFIG=2
+# 09-25 审计：飞控实值=9/2/1 全对，本文件曾滞后为旧配方（GPS1_TYPE,1）——已按实值改写，消除"全量导入打回空口"雷
+# 2026-09-25 上网核验：CUAV 使用指南官方配方=GPS1_TYPE=9 + CAN_P1_DRIVER=1 + GPS_AUTO_CONFIG=2（"自动配置 DroneCAN GPS"，AP≥4.6 新名）——与本文件一致；官方另列 GPS1_POS_X/Y/Z（天线相对重心偏移，米，前/右/下为正）→ 装机实测后回填挂账
 # 改正链：X20P 基站→笔记本 MP(RTK Inject)→915 数传(TELEM2)→FC→移动端 CAN（09-23 起切 CAN；见 04 册 §3）
-GPS1_TYPE,1
+# NEO-3 已拔除转台架备份；应急切换见 05 册「备用GPS_NEO3应急切换.md」（GPS1_TYPE 临时改 1）
+GPS1_TYPE,9
+GPS_AUTO_CONFIG,2
+CAN_D1_PROTOCOL,1
+GPS_AUTO_SWITCH,1
+# 以下两行为 GPS2(SERIAL4) 空口备用口径：X20P 移 CAN 后此口无设备，TYPE=2 空跑无害
+# （若恢复 X20P@UART 备用路线，改回 GPS1_TYPE=2/SERIAL4 口径并查 09-20 定案批）
 GPS2_TYPE,2
 SERIAL4_BAUD,230
-GPS_AUTO_SWITCH,1
 
 # ---------- 6. 精准降落（Orin 发 LANDING_TARGET，飞控 PLND 模块执行） ----------
 # ⚠️ 2026-09-14 勘误后口径：PLND_TYPE 0=Never / 1=CompanionComputer(MAVLink 收

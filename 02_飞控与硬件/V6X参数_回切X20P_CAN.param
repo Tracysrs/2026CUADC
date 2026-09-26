@@ -1,0 +1,6 @@
+# V6X 参数片：回切 GPS1 → X20P 流动端（DroneCAN）
+# 与 09-22/23 单RTK 终态四钥匙一致（CAN_P1_DRIVER=1/CAN_D1_PROTOCOL=1 不动，此片只翻 GPS 位）
+# 前提：机上 X20P 为健康模块且接 CAN 4P 座
+# 导入方式同 NEO3 片（两遍+重启）；导完 ops.py prearm 复核
+GPS1_TYPE,9
+GPS_AUTO_CONFIG,2

@@ -6,7 +6,8 @@
 |---|---|
 | `V6X_ardupilot_params.param` | V6X ArduPilot 主参数（PLND / EKF2 激光 / WPNAV 等，任务书 W3 导入，**必须导入两遍中间重启**） |
 | `V6X_offboard_params.param` | offboard 相关参数快照 |
-| `参数备份/` | 飞控实测参数备份：`*_20260924_231201.param`（0924，1082 项，含 EK3_RNG_USE_HGT=4 / RNGFND1_TYPE=10 / SERIAL2_BAUD=57 定案）为**当前已配置基线**（diff 对照基准），`*_195845.param`（0919，1071 项）为其前版、`*_195445.param` 为新板出厂默认；旧板备份（09-05~09-17）留档对照 |
+| `参数备份/` | 飞控实测参数备份：`*_20260928_003713.param`（0928，1105 项，单NEO3 实态：NEO3@GPS1、X20P 撤、RNGFND 关闭）为**当前实态基线**，`*_20260924_231201.param`（0924，1082 项，MT-01P/X20P 在位配置，含 EK3_RNG_USE_HGT=4 / RNGFND1_TYPE=10 / SERIAL2_BAUD=57 定案）为换装前对照基准，`*_195845.param`（0919，1071 项）为其前版、`*_195445.param` 为新板出厂默认；旧板备份（09-05~09-17）留档对照 |
+| `gps/单neo3方案.md` | **单 NEO3 方案参数记录**（2026-09-28 建）：飞控 COM17 实读 1105 参数全量照录 + GPS/串口/EKF 源/罗盘核心参数注解 + 与 0924 基线差异归组（GPS 换装、RNGFND1 关闭挂账、TELEM3 链路批次） |
 | `firmware/` | 飞控固件存档：已刷的 4.7-beta v2 + 回退备用版 + SIH 台架专用版（附 README 与 SHA256SUMS） |
 | `调试工具/README.md` | 飞控调试脚本：`ops.py` 统一入口 + check_fc / check_gps / prearm_diag / site_geo_check / rtk_setup / check_radio / verify_params / motor_test / servo_test / fc_* 全套；SIH 固件 Jetson 编译脚本 `sih_jetson_build.sh` 也在此 |
 | `设备参数/C-RTK3X20P.md` | CUAV C-RTK 3 X20P 基站+移动端（09-20 起 RTK 主链，验收达标后转正） |

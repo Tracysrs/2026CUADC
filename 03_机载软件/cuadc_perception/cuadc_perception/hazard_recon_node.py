@@ -94,6 +94,9 @@ class HazardReconNode(Node):
         self.declare_parameter('min_frames', 5)
         self.declare_parameter('min_median_conf', 0.8)
         self.declare_parameter('vote_ratio', 3.0)
+        # 移动判读候选开关（2026-09-27，默认关=行为同旧版；准入凭 recon_eval 离线评估数据）
+        self.declare_parameter('conf_agg', 'median')      # 'median'|'best_k'
+        self.declare_parameter('assoc_predict', False)    # 关联速度外推
         self.declare_parameter('require_recon_state', True)
         self.declare_parameter('ack_delay_s', 0.05)
         # ---- 连续判读模式（2026-09-27）：RECON 态免握手滚动窗口 ----
@@ -160,6 +163,8 @@ class HazardReconNode(Node):
             min_frames=int(gp('min_frames').value),
             min_median_conf=float(gp('min_median_conf').value),
             vote_ratio=float(gp('vote_ratio').value),
+            conf_agg=str(gp('conf_agg').value),
+            assoc_predict=bool(gp('assoc_predict').value),
         )
 
         # ---- 发布 / 订阅 ----

@@ -11,6 +11,16 @@
      无任何类达标 → 留空（class_id=-1）。
   计分语义：留空 0 分，错填 -100 → 一切阈值以"错填率≈0"优先。
 
+移动判读候选开关（2026-09-27，默认关 = 行为与旧版完全一致，准入由离线评估
+工具 scripts/recon_eval.py 的"留空率降、错填率不升"数据决定后才会改默认）：
+  - conf_agg='best_k'：置信聚合从"全历史中位数"改为"该类最优 min_frames 帧
+    的中位数"——证据要求仍是 min_frames 帧过硬，只是不要求占全窗多数
+    （运动时半数帧被模糊拖低，全窗中位数必死，best_k 仍能确认）。
+  - assoc_predict=True：跨帧关联前按类级速度（同窗同类检测的帧间位移，
+    不依赖关联成功、无冷启动）外推累积器位置再算 IoU，打平时偏向票数多
+    的老轨迹——快速横移时相邻帧框位移大、纯 IoU 关联会把同一标识拆成
+    碎累积器。
+
 本模块刻意不 import rclpy/传感器消息：单元测试与本机（Windows）可直接运行；
 真节点（M4）与离线评估工具都只消费这里的数据类与规则。
 """
@@ -168,17 +178,31 @@ class MarkerFusion:
         min_frames: int = CONFIRM_MIN_FRAMES,
         min_median_conf: float = CONFIRM_MIN_MEDIAN_CONF,
         vote_ratio: float = CONFIRM_VOTE_RATIO,
+        conf_agg: str = 'median',
+        assoc_predict: bool = False,
+        predict_max_dt_s: float = 0.5,
     ):
         if not (0.0 < assoc_iou < 1.0):
             raise ValueError('assoc_iou 必须在 (0,1)')
+        if conf_agg not in ('median', 'best_k'):
+            raise ValueError("conf_agg 只支持 'median' | 'best_k'")
         self.assoc_iou = assoc_iou
         self.min_frames = min_frames
         self.min_median_conf = min_median_conf
         self.vote_ratio = vote_ratio
+        self.conf_agg = conf_agg
+        self.assoc_predict = assoc_predict
+        self.predict_max_dt_s = predict_max_dt_s
         self.markers: List[MarkerAccumulator] = []
+        # 类级速度轨迹（assoc_predict 兜底）：不依赖关联成功，破解
+        # "碎票 → 累积器凑不出速度 → 外推永远失效"的冷启动死锁
+        self._class_last: Dict[int, tuple] = {}
+        self._class_vel: Dict[int, tuple] = {}
 
     def reset(self) -> None:
         self.markers.clear()
+        self._class_last.clear()
+        self._class_vel.clear()
 
     def update(self, detections: List[Detection]) -> None:
         for det in detections:
@@ -190,33 +214,76 @@ class MarkerFusion:
                 )
                 self.markers.append(acc)
             acc.add(det)
+            if self.assoc_predict:
+                self._update_class_track(det)
+
+    def _update_class_track(self, det: Detection) -> None:
+        """类级速度：取该类本帧首个检测与上帧位置的位移（单标识场景=目标速度）。"""
+        prev = self._class_last.get(det.class_id)
+        if prev is not None and det.stamp_s > prev[2]:
+            dt = det.stamp_s - prev[2]
+            self._class_vel[det.class_id] = (
+                (det.u - prev[0]) / dt, (det.v - prev[1]) / dt)
+        self._class_last[det.class_id] = (det.u, det.v, det.stamp_s)
 
     def _associate(self, det: Detection) -> MarkerAccumulator | None:
-        best, best_iou = None, self.assoc_iou
+        """IoU 关联；assoc_predict=True 时用类级速度外推预测位置再算 IoU。
+
+        打平时偏向票数多的累积器（老轨迹优先）：预测位置相同时防止同一物理
+        轨迹在两个累积器间震荡分票（09-27 单测实测 4/2 分票谁也到不了
+        min_frames 的教训）。
+        """
+        best, best_iou, best_votes = None, self.assoc_iou, -1
+        vel = self._class_vel.get(det.class_id, (0.0, 0.0)) \
+            if self.assoc_predict else (0.0, 0.0)
         for acc in self.markers:
+            u, v = acc.last_u, acc.last_v
+            if self.assoc_predict:
+                dt = det.stamp_s - acc.last_stamp_s
+                if 0.0 < dt <= self.predict_max_dt_s:
+                    u += vel[0] * dt
+                    v += vel[1] * dt
             iou = bbox_iou(det.u, det.v, det.w, det.h,
-                           acc.last_u, acc.last_v, acc.last_w, acc.last_h)
-            if iou >= best_iou:
-                best, best_iou = acc, iou
+                           u, v, acc.last_w, acc.last_h)
+            if iou >= self.assoc_iou:
+                votes = sum(acc.votes.values())
+                # IoU 打平判容差：外推预测的浮点噪声会让"理应相等"的两个 IoU
+                # 差 1e-16 量级，精确比较会让噪声赢过票数裁决（09-27 单测实测）
+                if iou > best_iou + 1e-9 or (
+                        abs(iou - best_iou) <= 1e-9 and votes > best_votes):
+                    best, best_iou, best_votes = acc, iou, votes
         return best
+
+    def _conf_agg(self, acc: MarkerAccumulator, c: int) -> float:
+        """类置信聚合：median=全历史中位数（旧口径）| best_k=最优 min_frames 帧。"""
+        h = acc.conf_history[c]
+        if self.conf_agg == 'best_k' and len(h) > self.min_frames:
+            return median(sorted(h)[-self.min_frames:])
+        return median(h)
+
+    def _margin_agg(self, acc: MarkerAccumulator, c: int) -> float:
+        h = acc.margin_history[c]
+        if self.conf_agg == 'best_k' and len(h) > self.min_frames:
+            return median(sorted(h)[-self.min_frames:])
+        return median(h)
 
     def verdicts(self) -> List[MarkerVerdict]:
         return [self._verdict(acc) for acc in self.markers]
 
     def _verdict(self, acc: MarkerAccumulator) -> MarkerVerdict:
         ranked = sorted(acc.votes.items(), key=lambda kv: kv[1], reverse=True)
-        # 最强类：按票数，平票取置信中位数高者（供留空时的显示值）
+        # 最强类：按票数，平票取聚合置信高者（供留空时的显示值）
         best_class = max(
             acc.votes,
-            key=lambda c: (acc.votes[c], median(acc.conf_history[c])),
+            key=lambda c: (acc.votes[c], self._conf_agg(acc, c)),
         )
-        best_median = median(acc.conf_history[best_class])
-        best_margin = median(acc.margin_history[best_class])
+        best_median = self._conf_agg(acc, best_class)
+        best_margin = self._margin_agg(acc, best_class)
 
         # 达标类 = 票数与置信都过硬门槛的类
         qualified = [
             c for c, n in acc.votes.items()
-            if n >= self.min_frames and median(acc.conf_history[c]) >= self.min_median_conf
+            if n >= self.min_frames and self._conf_agg(acc, c) >= self.min_median_conf
         ]
         if len(qualified) > 1:
             return MarkerVerdict(acc.marker_index, CLASS_ID_BLANK,
@@ -228,8 +295,8 @@ class MarkerFusion:
                                   default=0)
             if acc.votes[c] >= self.vote_ratio * runner_up_votes:
                 return MarkerVerdict(acc.marker_index, c,
-                                     median(acc.conf_history[c]),
-                                     median(acc.margin_history[c]),
+                                     self._conf_agg(acc, c),
+                                     self._margin_agg(acc, c),
                                      acc.votes[c],
                                      ambiguous=False, insufficient=False)
             # 达标但无主导（如 5:4）→ 竞争拒识

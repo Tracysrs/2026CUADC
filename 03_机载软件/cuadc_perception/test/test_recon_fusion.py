@@ -1,7 +1,10 @@
 """recon_fusion 单元测试（纯 stdlib，本机可直接跑，不需要 ROS）：
 
     cd 03_机载软件
-    PYTHONPATH=. python -m unittest discover -s cuadc_perception/test -v
+    PYTHONPATH=cuadc_perception python -m unittest discover -s cuadc_perception/test -v
+
+（PYTHONPATH 指向包外层 cuadc_perception/ 目录——外层与内层同名，写 `.` 会被
+namespace 包遮蔽报 ModuleNotFoundError，09-27 实测。）
 
 覆盖《接口契约.md》§5 结论规则与 SSOT §4.4 拒识策略的可执行子集。
 """
@@ -153,6 +156,60 @@ class TestMarkerFusion(unittest.TestCase):
         f.update([det(100, 100, 9, 0.9, runner=0.1)])
         f.reset()
         self.assertEqual(f.verdicts(), [])
+
+    # ---- 移动判读候选开关（2026-09-27；默认关，准入凭 recon_eval 数据）----
+
+    def test_best_k_conf_aggregation_confirms(self):
+        # 8 帧置信爬升：全历史中位 (0.58+0.81)/2=0.695 <0.8 → 留空；
+        # best_k（最优 5 帧 0.81~0.87 中位 0.83）→ 确认
+        confs = [0.50, 0.52, 0.55, 0.58, 0.81, 0.83, 0.85, 0.87]
+
+        def stream(f):
+            for i, c in enumerate(confs):
+                f.update([det(100, 100, 9, c, runner=0.1, t=i * 0.1)])
+
+        f0 = MarkerFusion()
+        stream(f0)
+        v0 = f0.verdicts()[0]
+        self.assertEqual(v0.class_id, CLASS_ID_BLANK)
+        self.assertTrue(v0.insufficient)
+
+        f1 = MarkerFusion(conf_agg='best_k')
+        stream(f1)
+        v1 = f1.verdicts()[0]
+        self.assertEqual(v1.class_id, 9)
+        self.assertFalse(v1.ambiguous)
+        self.assertAlmostEqual(v1.confidence, 0.83)
+
+    def test_invalid_conf_agg_rejected(self):
+        with self.assertRaises(ValueError):
+            MarkerFusion(conf_agg='top3')
+
+    def test_assoc_predict_tracks_fast_mover(self):
+        # 40px 框每帧右移 30px、dt=0.1s：纯 IoU(0.3) 关联断链碎票全留空；
+        # 速度外推（含类级速度兜底冷启动）锁回单轨迹 → 确认
+        def stream(f):
+            for i in range(6):
+                f.update([det(100 + 30 * i, 100, 9, 0.9, runner=0.1,
+                              t=i * 0.1)])
+
+        f0 = MarkerFusion()
+        stream(f0)
+        self.assertTrue(all(v.class_id == CLASS_ID_BLANK and v.insufficient
+                            for v in f0.verdicts()))
+
+        f1 = MarkerFusion(assoc_predict=True)
+        stream(f1)
+        confirmed = [v for v in f1.verdicts() if v.class_id == 9]
+        self.assertEqual(len(confirmed), 1)
+        self.assertGreaterEqual(confirmed[0].frames, 5)
+
+    def test_assoc_predict_default_off_matches_legacy(self):
+        # 默认参数下外推不生效：快速移动流仍碎票（与旧版行为一致）
+        f = MarkerFusion()
+        for i in range(6):
+            f.update([det(100 + 30 * i, 100, 9, 0.9, runner=0.1, t=i * 0.1)])
+        self.assertTrue(all(v.insufficient for v in f.verdicts()))
 
 
 if __name__ == '__main__':

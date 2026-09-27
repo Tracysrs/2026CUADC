@@ -13,6 +13,14 @@ viewpoint_seq 对齐 capture_request，空结论也发。
   top1 = 该框置信度；runner-up = 同位置竞争框（IoU ≥ comp_iou）中**异类**最高置信度
   ——det 模型每框单类，类别竞争体现为同位置异类框的置信度对峙。
 
+连续判读模式（2026-09-27，continuous_mode 参数，默认关）：
+  RECON 态下窗口背靠背自开（免 capture_request 握手），seq 自 continuous_seq_base
+  自增、不回 capture_done；结论签名未变时按 continuous_dedup_s 抑制发布（期满必发
+  = 存活心跳）；每次产出原子写 summary_path（~/recon_latest.json）——无图传体系的
+  落地读出兜底。外部 capture_request 仍可用且优先（打断当前连续窗）。背景：
+  引擎本就每帧推理，连续窗只影响融合累积与发布，零额外算力；0/6 拍照握手在
+  飞行态的非确定性不再连累判读产出。
+
 工程五件套落地项（SSOT §4.6）：
   - 模型 SHA-256 校验（expected_sha256 非空时强校验，不符拒启）；
   - 黑帧预热 3 帧（开机即热，journal 留痕，P0.3 systemd 自启的"预热自检"步）；
@@ -88,6 +96,17 @@ class HazardReconNode(Node):
         self.declare_parameter('vote_ratio', 3.0)
         self.declare_parameter('require_recon_state', True)
         self.declare_parameter('ack_delay_s', 0.05)
+        # ---- 连续判读模式（2026-09-27）：RECON 态免握手滚动窗口 ----
+        # 默认关 = 契约零影响；开 = 窗口关闭后立即自开下一个（周期≈window_duration_s，
+        # 引擎本就每帧推理，连续窗只影响融合累积与发布，无额外算力成本）。
+        # seq 自 continuous_seq_base 起自增（避开状态机 0..N 区间），不回 capture_done。
+        # 外部 capture_request 仍随时可用且优先（会打断当前连续窗口）。
+        self.declare_parameter('continuous_mode', False)
+        self.declare_parameter('continuous_seq_base', 10000)
+        # 自触发窗口"结论签名未变"时的发布抑制（秒），0=不去重；抑制期满必发一次=存活心跳
+        self.declare_parameter('continuous_dedup_s', 12.0)
+        # 最新结论落盘（落地读出兜底：无图传时组员 SSH cat 此文件即可填单）
+        self.declare_parameter('summary_path', '~/recon_latest.json')
 
         # ---- 证据落盘 ----
         self.declare_parameter('evidence_enabled', True)
@@ -106,6 +125,10 @@ class HazardReconNode(Node):
         self.window_duration = float(gp('window_duration_s').value)
         self.require_recon = bool(gp('require_recon_state').value)
         self.ack_delay = float(gp('ack_delay_s').value)
+        self.continuous_mode = bool(gp('continuous_mode').value)
+        self.cont_seq = int(gp('continuous_seq_base').value)
+        self.cont_dedup_s = float(gp('continuous_dedup_s').value)
+        self.summary_path = os.path.expanduser(gp('summary_path').value)
         self.evidence_wanted = bool(gp('evidence_enabled').value)
         self.evidence_root = os.path.expanduser(gp('evidence_dir').value)
 
@@ -181,6 +204,9 @@ class HazardReconNode(Node):
         self.frame_count = 0
         self.debug_log = bool(gp('debug_frame_log').value)
         self._last_frame_t = 0.0
+        self.window_self = False       # 当前窗口是否连续模式自触发
+        self._last_pub_sig = None      # 上次发布结论签名 (marker_index, class_id, ambiguous)
+        self._last_pub_t = 0.0
 
         self.create_timer(0.1, self.on_timer)  # 窗口超时看护
         self.get_logger().info(
@@ -215,7 +241,17 @@ class HazardReconNode(Node):
         if seq in self.acked_seqs:
             self.get_logger().warn(f'收到重复 capture_request seq={seq}，忽略')
             return
+        self._open_window(seq, ack=True)
+
+    def _open_window(self, seq, ack: bool):
+        """开证据窗口。外部 capture_request（ack=True）与连续模式自触发（ack=False）共用。
+
+        自触发窗口的 seq 也入 acked_seqs：防状态机后续请求撞号；列表超长裁半防涨。
+        """
         self.acked_seqs.append(seq)
+        if len(self.acked_seqs) > 256:
+            del self.acked_seqs[:128]
+        self.window_self = not ack
 
         # 证据目录与磁盘门禁（<512MB 停证，SSOT §5.3；盘容量查 home 所在分区）
         self.window_dir = None
@@ -235,12 +271,14 @@ class HazardReconNode(Node):
         self.window_deadline = time.time() + self.window_duration
         self.window_last_stamp = None
         self.last_evidence_t = 0.0
+        origin = '连续模式自触发' if self.window_self else 'capture_request'
         self.get_logger().info(
-            f'capture_request seq={seq} → 证据窗口开启 ({self.window_duration:.1f}s)'
+            f'{origin} seq={seq} → 证据窗口开启 ({self.window_duration:.1f}s)'
             + (f', 证据目录 {self.window_dir}' if self.window_dir else ''))
 
-        # ack 尽快回：语义 = "证据窗口已开启"；判定异步产出，不阻塞状态机
-        timer = self.create_timer(self.ack_delay, lambda: self._fire_ack(timer, seq))
+        if ack:
+            # ack 尽快回：语义 = "证据窗口已开启"；判定异步产出，不阻塞状态机
+            timer = self.create_timer(self.ack_delay, lambda: self._fire_ack(timer, seq))
 
     def _fire_ack(self, timer, seq):
         timer.cancel()
@@ -390,7 +428,13 @@ class HazardReconNode(Node):
             self.fusion = None
 
     def _window_tick(self):
-        if self.fusion is None or time.time() < self.window_deadline:
+        if self.fusion is None:
+            # 连续模式：RECON 态免握手自动开窗（周期≈window_duration_s，背靠背）
+            if self.continuous_mode and 'RECON' in (self.current_state or ''):
+                self.cont_seq += 1
+                self._open_window(self.cont_seq, ack=False)
+            return
+        if time.time() < self.window_deadline:
             return
         verdicts = self.fusion.verdicts()
         seq = self.window_seq
@@ -434,7 +478,17 @@ class HazardReconNode(Node):
                         'crop': crop,
                         'stamp': datetime.now().isoformat(timespec='seconds'),
                     }, ensure_ascii=False))
-            self.cls_pub.publish(msg)
+            sig = tuple((v.marker_index, v.class_id, bool(v.ambiguous)) for v in verdicts)
+            dedup_hit = (self.window_self and self.cont_dedup_s > 0
+                         and sig == self._last_pub_sig
+                         and time.time() - self._last_pub_t < self.cont_dedup_s)
+            if dedup_hit:
+                self.get_logger().info(
+                    f'seq={seq} 结论未变，{self.cont_dedup_s:.0f}s 去重抑制（证据照常落盘）')
+            else:
+                self.cls_pub.publish(msg)
+                self._last_pub_sig, self._last_pub_t = sig, time.time()
+            self._write_summary(seq, state, verdicts)
             if lines:
                 self._write_jsonl_atomic(lines)
             summary = ', '.join(
@@ -489,6 +543,31 @@ class HazardReconNode(Node):
             os.replace(tmp, path)
         except Exception as e:
             self.get_logger().warn(f'证据 JSONL 写入失败: {e}')
+
+    def _write_summary(self, seq, state, verdicts):
+        """最新结论落盘（落地读出兜底，2026-09-27 连续模式配套）：
+        无图传时组员落地后 SSH cat 此文件即得当前判定，原子写防半行。"""
+        data = {
+            'stamp': datetime.now().isoformat(timespec='seconds'),
+            'viewpoint_seq': seq,
+            'state': state,
+            'markers': [
+                {'marker_index': v.marker_index,
+                 'class_id': v.class_id,
+                 'class_name': (self.class_names.get(v.class_id, '?')
+                                if v.class_id >= 0 else '留空'),
+                 'confidence': float(v.confidence),
+                 'frames': int(v.frames),
+                 'ambiguous': bool(v.ambiguous)}
+                for v in verdicts],
+        }
+        tmp = self.summary_path + '.tmp'
+        try:
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+            os.replace(tmp, self.summary_path)
+        except Exception as e:
+            self.get_logger().warn(f'结论 summary 写入失败: {e}')
 
 
 def _iou_xywhn(a, b):

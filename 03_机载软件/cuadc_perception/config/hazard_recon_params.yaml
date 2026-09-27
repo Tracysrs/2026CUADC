@@ -28,6 +28,11 @@
     vote_ratio: 3.0
     require_recon_state: true
     ack_delay_s: 0.05
+    # 连续判读模式（2026-09-27）：RECON 态免握手滚动窗；握手保留仅作状态机进度
+    continuous_mode: true
+    continuous_seq_base: 10000
+    continuous_dedup_s: 12.0
+    summary_path: ~/recon_latest.json
     # 证据落盘
     evidence_enabled: true
     evidence_dir: ~/recon_evidence

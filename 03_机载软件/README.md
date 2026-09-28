@@ -10,7 +10,7 @@
 | `cuadc_mission/` | 任务状态机：全生命周期状态机 + 感知接入 + 目标锁定 + 两段对准 + 八门控投放（SSOT §5.1/§5.2） | **M1 骨架 + M3 投放链就绪，待 SITL 验证**（C++ 三件单测 252 checks + Python 58 例全绿，09-20；09-20 五批修复与重构**待 fc_regression_m3.sh 上机回归**） |
 | `cuadc_interfaces/` | 自定义消息包：侦察判读 `ReconClassification/ReconMarker`（契约 §5）；SafetyStatus 等 M4 接口后续在此追加 | 就绪 |
 | `cuadc_perception/` | 感知包：侦察判读 `hazard_recon_node`（已上机生产）+ **白桶感知 `bucket_perception_node`（M2，双通道 seg+LAB）** + **H 圆精准降落 `h_circle_node`（M4，LANDING_TARGET→PLND）** + 公共算法库 `vision_core.py`（纯算法可离线单测）+ 契约校验器 + 判读融合/查看器/仿真替身 | 09-13 全链代码落地，48 例单测全绿，待上机联调 |
-| `scripts/` | `setup_env_ubuntu22.sh`（环境一键装）+ `run_sitl.sh`（SITL 全链路一键拉起）+ `calibrate_camera.py`（相机内参棋盘标定 → calib.yaml，直供节点 calib_path）+ `recon_eval.py`（判读融合离线评估：genseq 合成序列/detect 出缓存/replay 纯 Python 回放扫掠，移动模糊场景融合规则准入闸门，2026-09-27） | 就绪 |
+| `scripts/` | `setup_env_ubuntu22.sh`（环境一键装）+ `run_sitl.sh`（SITL 全链路一键拉起）+ `calibrate_camera.py`（相机内参棋盘标定 → calib.yaml，直供节点 calib_path）+ `recon_eval.py`（判读融合离线评估：genseq 合成序列/detect 出缓存/replay 纯 Python 回放扫掠，移动模糊场景融合规则准入闸门，2026-09-27）+ `kacha`（咔嚓·运行时拍照一键工具：单拍/连拍/画框/只存命中，订阅相机流不抢设备，自动补 ROS 环境，Jetson `~/kacha`，2026-09-28）+ `snap_timer.py`（定时抓帧留证，kacha 的长间隔版） | 就绪 |
 | `接口契约.md` | 视觉↔状态机↔侦察↔PLND 接口权威文档（字段复用/哨兵/时间戳/心跳/判读消息/LANDING_TARGET 流） | **v1.3 定稿** |
 | `时间同步设计.md` | P0.4：取帧时刻戳 + odom 插值夹逼（代码已就绪，M2 仿真验收） | 设计+代码就绪 |
 | `源码导航.md` | mission_node 函数索引（按区块）+ 行为澄清表（旧口径→现行事实，§15-E3，新人防误解） | 09-20 定稿 |

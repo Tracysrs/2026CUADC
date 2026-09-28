@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""kacha · 咔嚓——Jetson 运行时拍照一键工具（订阅 /camera/image_raw/compressed，不抢 /dev/video0，
+与相机节点/识别管线并存）。snap_timer.py 的单拍/连拍快捷版；长时间定间隔留证仍用 snap_timer.py。
+
+用法（Jetson 上，无需手动 source ROS，脚本自动补）：
+    kacha                  # 单拍一张 → ~/photos/日期/时分秒.jpg
+    kacha 20               # 连拍 20 张（0.5s 间隔，同目录）
+    kacha 20 2             # 连拍 20 张（2s 间隔）
+    kacha 20 --dir ~/xxx   # 自定义目录
+    kacha 10 --detect      # 连拍并跑现役模型画框
+    kacha 10 --detect --only-hit   # 只存有检出的帧（需 --detect）
+Ctrl-C 随停，已存帧保留。存储参考：1080p JPEG 0.2~0.4MB/张。
+"""
+import argparse
+import os
+import sys
+import time
+
+try:
+    import rclpy
+except ImportError:
+    # 非交互 shell 没带 ROS 环境——source 后重执行自身（11 册：非交互 ssh 不读 .bashrc）
+    os.execvp("bash", ["bash", "-c",
+             f"source /opt/ros/humble/setup.bash && exec python3 {os.path.abspath(__file__)} "
+             + " ".join(f"'{a}'" for a in sys.argv[1:])])
+
+import cv2
+import numpy as np
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import CompressedImage
+
+ENGINE = "/home/nvidia/cuadc_models/best.engine"
+
+
+def main():
+    ap = argparse.ArgumentParser(description="咔嚓：Jetson 运行时拍照（单拍/连拍/画框）")
+    ap.add_argument("count", nargs="?", type=int, default=1, help="张数（默认 1=单拍）")
+    ap.add_argument("interval", nargs="?", type=float, default=0.5, help="连拍间隔秒（默认 0.5）")
+    ap.add_argument("--dir", default=os.path.expanduser("~/photos"), help="根目录（默认 ~/photos，自动建日期子目录）")
+    ap.add_argument("--detect", action="store_true", help="跑现役 best.engine 画框存图")
+    ap.add_argument("--only-hit", action="store_true", help="只存有检出的帧（需 --detect）")
+    ap.add_argument("--conf", type=float, default=0.10, help="检测置信度阈值（默认 0.10）")
+    a = ap.parse_args()
+    a.dir = os.path.expanduser(a.dir)
+    outdir = os.path.join(a.dir, time.strftime("%Y%m%d"))
+    os.makedirs(outdir, exist_ok=True)
+
+    rclpy.init()
+    node = rclpy.create_node("kacha")
+    frames = []
+    node.create_subscription(CompressedImage, "/camera/image_raw/compressed",
+                             lambda m: frames.append(m.data), qos_profile_sensor_data)
+
+    model = None
+    if a.detect:
+        from ultralytics import YOLO
+        model = YOLO(ENGINE, task="detect")
+        for _ in range(3):  # 黑帧预热（部署铁律）
+            model.predict(np.zeros((640, 640, 3), dtype=np.uint8), imgsz=640, verbose=False)
+
+    print(f"kacha：目标 {a.count} 张 @ {a.interval}s → {outdir}（Ctrl-C 随停）")
+    saved, t0 = 0, time.time()
+    try:
+        while saved < a.count:
+            rclpy.spin_once(node, timeout_sec=0.3)
+            if not frames:
+                if time.time() - t0 > 15:
+                    sys.exit("15s 未收到相机帧——相机节点没起或 QoS 失配")
+                continue
+            jpg = frames.pop()
+            img = cv2.imdecode(np.frombuffer(jpg, np.uint8), cv2.IMREAD_COLOR)
+            path = os.path.join(outdir, time.strftime("%H%M%S") + f"_{saved:03d}.jpg")
+            note = ""
+            if model is not None:
+                r = model.predict(img, imgsz=640, conf=a.conf, verbose=False)[0]
+                for b in r.boxes:
+                    x1, y1, x2, y2 = [int(v) for v in b.xyxy[0].tolist()]
+                    cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(img, f"{int(b.cls[0])} {float(b.conf[0]):.2f}", (x1, max(20, y1 - 6)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                if a.only_hit and len(r.boxes) == 0:
+                    continue
+            cv2.imwrite(path, img)
+            saved += 1
+            print(f"  [{saved}/{a.count}] {path}{note}")
+            if saved < a.count:
+                time.sleep(a.interval)
+    except KeyboardInterrupt:
+        print(f"\nCtrl-C：已存 {saved} 张保留在 {outdir}")
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+    print(f"完成：{saved} 张 → {outdir}")
+
+
+if __name__ == "__main__":
+    main()

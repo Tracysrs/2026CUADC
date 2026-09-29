@@ -46,6 +46,7 @@ CMDS = {
     "armtest":       ("fc_armtest.sh",  "Jetson", "解锁试跑·直接路径（CommandBool 10s）"),
     "servo-test":    ("fc_servo_test.sh", "Jetson", "舵机投放时序（收1100/释1600）"),
     "servo-diag":    ("fc_servo_diag.sh", "Jetson", "舵机不动时诊断 /mavros/rc/out"),
+    "onekey":        ("fc_mission_onekey.py", "Jetson", "任务全流程一键（冷启动自检→MAVROS→状态机→看护→摘要）：本机执行=自动 ssh 到 Jetson。用法: onekey <23|13|12> [--no-vision] [--auto-arm] [--live-drop]"),
     "log":           ("fc_log_pull.py", "Jetson", "拉 dataflash 日志: log list | log get 名字"),
     "sync":          ("sync_jetson.py", "Jetson", "仓库→Jetson 一键同步+哈希核验（本机跑）: sync [push --yes] [关键词] | sync diff 关键词"),
 }
@@ -79,6 +80,15 @@ def main():
     path = os.path.join(HERE, script)
     if not os.path.exists(path):
         sys.exit(f"脚本不存在: {path}")
+    if name == "onekey":
+        # 任务一键是 Jetson 侧脚本（mavros/任务节点都在机上）：Windows 直接触发
+        # = 自动 ssh 远跑；-tt 让本地 Ctrl-C 转发到远端，触发 onekey 的
+        # 「退看护、不杀任务」安全语义（飞机可能仍在自主飞）。
+        cmd = ["ssh", "-tt", "-o", "ServerAliveInterval=30", "jetson",
+               "python3", "$HOME/" + script] + args
+        print(f">>> [{stage}] {desc}")
+        print(f">>> {' '.join(cmd)}\n")
+        sys.exit(subprocess.call(cmd))
     if script.endswith(".sh"):
         if os.name == "nt":
             print(f"[{stage}] {desc}")

@@ -6,21 +6,27 @@ set -euo pipefail
 
 DATA_DIR="${1:?用法: run_barrel_training.sh <数据集目录>}"
 OUT="${2:-deliver_work}"
-EPOCHS=100
-IMGSZ=640
-BATCH=16
+EPOCHS="${EPOCHS:-100}"
+IMGSZ="${IMGSZ:-640}"
+BATCH="${BATCH:-16}"
+CPU_SMOKE="${CPU_SMOKE:-0}"   # =1 时本机无 GPU 冒烟：跳过 GPU 检查与 pip 安装，参数用环境变量缩小
 
-echo "[1/6] GPU 检查"
-nvidia-smi
-python - <<'EOF'
+if [ "$CPU_SMOKE" != "1" ]; then
+  echo "[1/6] GPU 检查"
+  nvidia-smi
+  python - <<'EOF'
 import torch
 assert torch.cuda.is_available(), 'CUDA 不可用——镜像选错（要 PyTorch 2.x + CUDA 12.x）'
 print('GPU:', torch.cuda.get_device_name(0))
 EOF
 
-echo "[2/6] ultralytics（清华镜像；勿手滑升级 numpy 到 2.x 之外的环境无此约束）"
-pip install -q ultralytics -i https://pypi.tuna.tsinghua.edu.cn/simple
-yolo version
+  echo "[2/6] ultralytics（清华镜像；勿手滑升级 numpy 到 2.x 之外的环境无此约束）"
+  pip install -q ultralytics -i https://pypi.tuna.tsinghua.edu.cn/simple
+  yolo version
+else
+  echo "[1/6] CPU_SMOKE=1 —— 跳过 GPU 检查与 pip 安装"
+  echo "[2/6] ultralytics 用现装版本：$(yolo version 2>/dev/null || python -c 'import ultralytics; print(ultralytics.__version__)')"
+fi
 
 echo "[3/6] 数据集校验（图签一一对应 + 类别仅 0）"
 python - "$DATA_DIR" <<'EOF'

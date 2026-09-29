@@ -62,7 +62,9 @@ if ds_msgs:
     ds = ds_msgs[-1]
     dists = [m.current_distance for m in ds_msgs]
     print(f"  帧数: {len(ds_msgs)} | latest: {ds.current_distance}cm (min {min(dists)} / max {max(dists)})")
-    print(f"  方向: {ORIENT.get(ds.orientation, ds.orientation)} | 类型: {ds.type} | id: {ds.sensor_id} | 方差: {ds.covariance}")
+    # sensor_id 在部分 pymavlink 版本的 distance_sensor 里没有（新版字段名漂移），容错取
+    sid = getattr(ds, "sensor_id", getattr(ds, "id", "?"))
+    print(f"  方向: {ORIENT.get(ds.orientation, ds.orientation)} | 类型: {ds.type} | id: {sid} | 方差: {ds.covariance}")
     print(f"  换算: {ds.current_distance/100:.2f} m")
 else:
     print("  无数据——飞控侧没有任何测距仪在出数")

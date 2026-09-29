@@ -61,18 +61,27 @@ def scan(src):
     return pairs, orphans
 
 
-def split_pairs(pairs, val_frac, seed):
-    """按片段切分（连续帧绝不跨集——防验证泄题，SSOT §8.3）。条目 = (kind, img, lbl, name)。"""
+def split_pairs(pairs, val_frac, seed, pin_train=()):
+    """按片段切分（连续帧绝不跨集——防验证泄题，SSOT §8.3）。条目 = (kind, img, lbl, name)。
+
+    pin_train：整段钉死在 train 的片段名（如 0031——与部分帧同批拍摄，留 val 会污染验证集）。
+    """
     rng = random.Random(seed)
     frags = {}
     for item in pairs:
         name = item[3]
         frags.setdefault(fragment_of(name), []).append(item)
+    missing = [k for k in pin_train if k not in frags]
+    if missing:
+        print(f'⚠️ --pin-train 片段在本池中不存在（忽略）: {missing}')
     keys = sorted(frags)
     rng.shuffle(keys)
     n_val = max(1, int(len(pairs) * val_frac))
     val, train, acc = [], [], 0
     for k in keys:
+        if k in pin_train:
+            train += frags[k]
+            continue
         if acc < n_val and len(val) + len(frags[k]) <= n_val + max(4, n_val // 10):
             val += frags[k]
             acc += len(frags[k])
@@ -107,6 +116,8 @@ def main():
     ap.add_argument('--out', default='barrel_seg_v1')
     ap.add_argument('--val-frac', type=float, default=0.12)
     ap.add_argument('--seed', type=int, default=0)
+    ap.add_argument('--pin-train', action='append', default=[],
+                    help='整段钉死在 train 的片段号（可重复，如 --pin-train 0031）')
     ap.add_argument('--version', default='')
     args = ap.parse_args()
 
@@ -131,11 +142,12 @@ def main():
             n_real += len(pairs)
     print(f'来源：合成 {n_synth} + 实拍 {n_real}（无标签背景帧 {n_orphan}）')
 
-    # 合成/实拍分池切分，再合并（合成独立随机 5%，实拍按片段 12%）
+    # 合成/实拍分池切分，再合并（合成独立随机 5%，实拍按片段 12%；钉扎只作用于实拍池）
     synth_pairs = [p for p in all_pairs if p[0] == 'synth']
     real_pairs = [p for p in all_pairs if p[0] == 'real']
     s_train, s_val = split_pairs(synth_pairs, 0.05, args.seed)
-    r_train, r_val = split_pairs(real_pairs, args.val_frac, args.seed)
+    r_train, r_val = split_pairs(real_pairs, args.val_frac, args.seed,
+                                 pin_train=set(args.pin_train))
     train, val = s_train + r_train, s_val + r_val
 
     for split in ('train', 'val'):
@@ -174,6 +186,7 @@ def main():
                 f'实拍 {n_real} 张（无标签背景帧 {n_orphan} → 空标签）\n'
                 f'- 切分：合成随机 5% / 实拍按**片段** {args.val_frac:.0%}'
                 f'（连续帧不跨集，防验证泄题）\n'
+                + (f'- 钉扎 train 片段: {", ".join(args.pin_train)}\n' if args.pin_train else '')
                 f'- train {len(train)} / val {len(val)}，总计 {copied}，'
                 f'空标签 {empty_lbl}\n'
                 f'- 类别：0 = barrel（单类；三档筒径 15/20/25cm 不分类别，'

@@ -89,6 +89,7 @@ CUAV V6X（ArduPilot 4.7-beta）+ ZD550 四轴的调试脚本集，2026-09-05 �
 | `fc_dryrun.sh`（`dryrun`） | Jetson | 真飞控 USB 链路一键验证 + 任务状态机干跑（无桨不解锁，仅观察 PreArm）。调试「Jetson 连飞控通不通」「状态机卡在哪一阶段」；日志落 `/tmp/cuadc_fc_dryrun_*/` |
 | `fc_armrun.sh`（`armrun`） | Jetson | 解锁试跑·状态机路径：临时放宽 ARMING_SKIPCHK / FS_THR_ENABLE（trap 兜底恢复+回读校验）自动解锁尝试。调试「状态机能不能走到解锁」；无 GPS 会卡 WAIT_NAV_STABLE |
 | `fc_armtest.sh`（`armtest`） | Jetson | 解锁试跑·直接路径：绕过状态机 CommandBool 解锁 10s → 上锁。调试「飞控本身肯不肯解锁」；无 GPS 被固件拒（Need Position Estimate） |
+| `fc_mission_onekey.py`（`onekey`） | Jetson | **任务全流程一键启动**（09-29 新增）：冷启动自检（systemd 感知服务/磁盘 512MB/工作空间）→ MAVROS+心跳泵 → 任务节点（投放方案注入）→ 状态轨迹看护 → 结果摘要。投放两筒组合（规则 3.1.2 筒号即直径，09-29 升级）：`23`=3号+2号 400 分保底 / `13`=1号+3号 600 分跳中筒（drop_logic 新增 pair_13 档位优先序）/ `12`=1号+2号 800 分冲奖；**没有中+中**（3.1.2 仅一筒 + 6.1.2 同区算一次 + 已投筒拉黑）。**PC 端入口：`python ops.py onekey <23\|13\|12>` 自动 ssh 到 Jetson 执行**（-tt 转发 Ctrl-C）。`--no-vision` M1 演练（投放方案不生效）/ `--auto-arm` 交解锁权（默认飞手，红线）/ `--live-drop` 实弹（默认舵机干跑）/ `--dry-run` 排练 / Ctrl-C 一次退看护不杀任务（飞机可能还在飞） |
 | `gcs_pump.py` | Jetson | GCS 心跳泵（先发后收）：ArduPilot 在链路上没有 GCS 心跳时不流送数据，此泵代发心跳拉起数据流。调试「mavros 起来了但没数据」；dryrun/armrun 等脚本自动调用，一般不手动跑 |
 
 ## 10. dataflash 飞行日志（SD 卡 .BIN）

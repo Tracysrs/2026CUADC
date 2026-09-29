@@ -32,5 +32,36 @@
 - **权重**：`yolov8n_v4_4090/best.pt`（AutoDL 4090，dataset_v4，yolov8n COCO 直训 100ep 计划、patience=20 早停于 44，best=epoch24 训练 val mAP50≈0.82/mAP50-95≈0.56；SHA-256 ce5566da…；**逐类验收报告未跑**，dataset_v4 在 AutoDL 数据盘，逐类数字待实例开机补 val）
 - **类别**：14 类 = 附件11 十类（序同现行）+ 10投弹筒1号/11投弹筒2号/12投弹筒3号/13landing_H（best.onnx 元数据读出）
 - **机载终判（09-28 台架，Jetson 10.128.119.217）**：TensorRT FP16 engine 构建成功（8.6MB，SHA 10256a75…，基准 54.5FPS PASS）；但**域泛化失败坐实**——机载相机空景最高置信 0.02（v2 同帧有 0.4~0.6 级响应）、自燃物品牌靶标帧最高 0.29 且**误判为易燃**，0 帧达 min_median_conf 0.8 产线（v2 同牌 0.99×18/18）；权重本身健康（哈工大域 0.73~0.90、.pt/engine/训练环境 onnx 三方一致、亮度/曝光排除）。**拍板：不切现役，生产维持 hazard_hgd_10cls_v2**（engine=964cd588…）
-- **留档**：Jetson `~/cuadc_models/`：best_v4.engine（暂存未挂产线）/best_v4.pt/best_v4_trainenv.onnx/archive/recon_20260928_best_v4.pt/SHA256SUMS.txt；证据帧 `~/ab_frames`（靶标 18 帧）+`~/ab_frames_bg`（空景 24 帧）
+- **留档**：Jetson `~/cuadc_models/archive/v4_4090_20260928/`（best_v4.engine/best_v4_trainenv.onnx/onnx_jetson_export.onnx/manifest.txt/evidence/=ab_frames 靶标 18 帧+ab_frames_bg 空景 24 帧+诊断快照；权重已先期归档为 archive/recon_20260928_best_v4.pt），`~/cuadc_models/` 根目录现仅 v2 三件（best.engine/best.pt/best.onnx，SHA 964cd588）+SHA256SUMS 回归现役行，v4 家目录残留清零（2026-09-28 深夜归档）
 - **下一步**：机载相机直采数据回流进下一版训练（与蓝地 v3 采集同场打包）；教训入 11 册 §9（训练域高分≠机载可用，换模前必须台架靶标 A/B）
+---
+
+## 机载直采标注组 aircraft_direct_20260929(爆炸品色移回流第一批,2026-09-29)
+
+- **位置**:`hazard_hgd_10cls_v2/aircraft_direct_20260929/`(images+labels+preview+grids,白名单外本地不入库;deliver_v2 镜像不复制数据仅同步本条目)
+- **内容**:机载 BL-500W 直采 120 图(YOLO det,10 类表)= A 组灰地/蓝地×角度×亮度单牌 80 张(全 0 爆炸品)+ B 组双牌同框 40 张(0+9 每图两框);0 类 120 框 + 9 类 40 框
+- **采集**:kacha 连拍 6 条件×20 张;v2 误读梯度取证 0.99(灰地亮)→0.91(斜视)→0.73(蓝地)→0.53(暗)——亮灰地最高危;双牌亮场红 0.95~0.96/橙 0.94
+- **标注**:v2 best.onnx 预标注→逐张目检修 18 张(删贴边杂框 11+暗场色相翻转改类 7)→复查全过;工具 prelabel.py 随组留档
+- **下游**:并入危化 v3 COCO 直训(禁单独微调);**val 必须掺本组帧**;验收=台架 1.5 牌判 0 ≥0.8×6/6+双牌不互串(详见组内 README.md)
+---
+
+## hazard_v3_direct(v3 建集:旧表重映射+直采回流,2026-09-30 训练中)
+
+- **建集方式**:mapped_dataset 成品集不在本机(30426 机器),经用户拍板走「模型辅助重映射」——现役 v2 best.onnx 对本机 train/(445 张哈工大原始旧表标注)逐框重标。依据:train/ 正是 v2 训练域数据(训过 100ep 域内响应近满分),实测 **99.0% 框 IoU≥0.5 对齐、conf p50=0.906**;混淆矩阵实锤**旧表 10 类中 8 类系统性名实错位(完美双射)**:旧→新 = {0:0, 1:5, 2:9, 3:3, 4:1, 5:4, 6:7, 7:6, 8:8, 9:2},仅 0 爆炸品/8 自燃物品名实相符——mapped_dataset 当年「按图案重排」的自动化复现。
+- **标签裁决**:2288 框用模型逐框类别(conf≥0.6)+ 88 框(conf<0.6 或未匹配)用主映射 + 6 个 conf≥0.85 新增检出框收进 GT(修复哈工大漏标/负样本污染);31 张哈希 PNG 剔除;切分纪律复刻 build_real_data.py(clip 随机 10% seed42/frame 中段/v1 末段,防连续帧泄题)。
+- **直采并入**:aircraft_direct_20260929 全 120 张(train 100 + val 20,每组开头连续帧进 val)——满足「val 必须掺机载直采帧」红线。
+- **规模**:train 476 图/2344 框 + val 58 图/198 框,十类分布均匀(~200~500/类 train)。
+- **训练**:yolov8n COCO 预训练直训(SSOT §8.2 口径 100ep/imgsz640/batch16/seed0),本机 CPU(torch 2.14;起点权重=yolov8n-seg.pt backbone 迁移 355/355 层,与官方 yolov8n.pt 等效,GitHub 被墙下的替代方案),2026-09-30 00:00 启动约 3.3h。结果待补。
+- **验收红线**:逐类 mAP50≥0.90 无豁免;台架 A/B 复测(新摆位)1.5 牌判 0 ≥0.8×6/6 + 双牌不互串——val 直采子集因连拍近静态存在块边界相似 caveat,指标只作方向参考,台架复测才是终判。
+
+---
+
+## hazard_v31_fusion(v3.1 色移+模糊合训集,2026-09-30 建集,训练待开)
+
+- **路线拍板**:用户拍板「合训一次,一次裁决」——v3_direct 色移回流与 09-27 挂账「11cls+模糊增广重训」合并为一版,省一次换模/一次台架 A/B;原 v3_direct 100ep 本机 CPU 训练 09-30 00:41 止于 epoch19(疑随会话管道关闭被终止),废弃不续,runs/detect/runs/hazard_v3_direct 留档不删。
+- **建集**:build_v31_dataset.py → hazard_v31_fusion/(白名单外本地不入库)。train 4696 = 旧 11class 合成 2220(synth_ 前缀,丢 barrel(10) 线)+ 物理模糊 split 2000(blur_ 前缀,速度谱 0.5~3.5m/s 全向物理换算=v×1/60s×FX800÷高度,2.0~3.0m 识别段,80% 运动/20% 清晰,seed31)+ v3_direct 实拍 476(real_ 前缀);val 58 = v3_direct val(含直采 20)纯实拍,合成一律不进 val。审计通过:标签零缺失零多余、id 全合法、逐类 train 587~698 / val 9~32(生物危害 9 最低)。
+- **类别口径**:10 类新表,与现役 v2 检测头同构(recon 链 NEG_CLASS=10 自然失活);barrel 不再作类别,白筒检测走 seg 线(barrel_seg_tools)。
+- **seeds 定案**(v2训练流水线/hazard_labels_v2_11class/hazard_labels/seeds/REMAP.md):原目录名 4 处错位(原腐蚀品=刺激性图案、原刺激性=放射性、原感染性物品=腐蚀品、原氧化剂=生物危害),两轮改名后目录名=图案=新表 id(哈希+牌面印刷文字+像素和三线验证 10/10);**旧 synth 标签 id 本就与新表对齐(目录错名恰好抵消),未做任何 id 重映射,严禁再按目录名语义映射**;synth/data.yaml 的 names 字符串陈旧但 id 语义正确。
+- **训练**:AutoDL 4090 脚本 v2训练流水线/run_v31_training.sh(yolov8n COCO 直训 100ep/imgsz640/batch16/seed0/patience30/hsv_h0.005/flipud0.5/close_mosaic10;上传 hazard_v31_fusion.zip+脚本即可,脚本 sed 重写 path 行并校验 4696/58);本机 CPU 备选同参约 14h。
+- **评估闸门基线**(03_机载软件/scripts/recon_eval.py):genseq 序列×2 seed(_reconeval/seq_s7、seq_s8,48 窗×20 帧@5Hz,v∈[0,3]m/s);现役 v2 detect+replay×2 已跑——**v2 对合成域近乎全盲**(s7 960 帧仅 48 帧=5% 过 0.7 门控,窗级 0 确认→两 seed 全留空 0 错填;s8 外推组合救回 1 窗 2%),主因=v2 只吃过哈工大实拍从未见合成渲染背景+640 推理下标识仅 ~19px。此为「改造前」画像;**融合开关(best_k/外推)准入裁决以 v3.1 模型 detect→replay 真数字为准**(判据=留空率显著降+错填率≈0,通过才翻 hazard_recon_node 默认并同步 SSOT §4.4)。
+- **验收红线**:逐类 mAP50≥0.90 无豁免;台架 A/B 终判(1.5 牌判 0 ≥0.8×6/6+双牌不互串+12 目标扫测),勿外推 val(09-28 教训);换模纪律=SHA 三处回填+bench 基准。

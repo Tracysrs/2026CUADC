@@ -14,3 +14,5 @@
 | param_backup_20260919_195445.param | 1063 | 换装板（现用）上电出厂默认快照（导入前基线） | 总编 09-19「新飞控到货换装配置」 |
 | param_backup_20260919_195845.param | 1071 | 基线 50+RC 26 两遍导入后快照（PLND 组激活 1063→1071；03 册 §2.8 failsafe 矩阵参数值来源） | 总编 09-19 同节 |
 | param_backup_20260924_231201.param | 1082 | 定高链路闭环终验（EK3_RNG_USE_HGT=4 / RNGFND1_TYPE=10 / SERIAL1 三键持久化实证；现行基线引用件） | 总编 09-24 补记八 |
+| param_backup_20260928_003713.param | 1105 | 单NEO3 读参定格快照（实态：NEO3@GPS1/X20P 撤；**RNGFND 关闭挂账态**——TYPE=0+EK3_RNG_USE_HGT=0，懒加载 RNGFND1 组 15 项从参数列表回收，与 0924 定案不一致当日挂账；本行 0928 测试会话补录） | 总编 09-28 单NEO3 节；gps/单neo3方案.md |
+| param_backup_20260928_164614.param | 1120 | **当前实态基线**：MT-01P 定高恢复激活后（两遍导入 RNGFND1_TYPE=10+EK3_RNG_USE_HGT=4 跨重启持久化，懒加载组 15 项回归 1105→1120；DISTANCE_SENSOR 台架实测 ~49Hz/11cm） | 总编 09-28「MT-01P 定高恢复激活与台架复测」 |

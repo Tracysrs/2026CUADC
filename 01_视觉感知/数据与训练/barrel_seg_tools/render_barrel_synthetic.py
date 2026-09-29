@@ -41,10 +41,10 @@ def hex_polygon(cx, cy, a, b, rot_deg, n=24):
     return pts
 
 
-def render_one(rng, size):
+def render_one(rng, size, blue_frac=0.6):
     w, h = size
     # ---- 背景：蓝地/水泥地 + 光照梯度 + 污渍 + 噪声 ----
-    (b0, b1) = BLUE_GROUND if rng.random() < 0.6 else GRAY_GROUND
+    (b0, b1) = BLUE_GROUND if rng.random() < blue_frac else GRAY_GROUND
     base = rng.uniform(b0, b1)
     img = np.empty((h, w, 3), np.float32)
     img[:, :] = base
@@ -117,6 +117,8 @@ def main():
     ap.add_argument('--val-frac', type=float, default=0.05)
     ap.add_argument('--size', default='1280x720')
     ap.add_argument('--seed', type=int, default=7)
+    ap.add_argument('--blue-frac', type=float, default=0.6,
+                    help='蓝地占比（其余为水泥地）；0.6=设计文档口径，0.5=蓝灰各半')
     args = ap.parse_args()
 
     rng = np.random.default_rng(args.seed)
@@ -129,7 +131,7 @@ def main():
     n_val = max(1, int(args.count * args.val_frac))
     for i in range(args.count):
         split = 'val' if i < n_val else 'train'
-        img, labels = render_one(rng, (w, h))
+        img, labels = render_one(rng, (w, h), blue_frac=args.blue_frac)
         # 命名无下划线 → build_barrel_dataset 的片段切分把每帧视为独立片段（合成帧随机切）
         name = f'synth{i:05d}.jpg'
         cv2.imwrite(os.path.join(args.out, 'images', split, name), img,

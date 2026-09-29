@@ -19,7 +19,7 @@
 映射清单（改布局必须同步改这里 + 根 README + SSOT §0）:
   03_机载软件/cuadc_{interfaces,mission,perception}  → jetson:cuadc_ws/src/同名
   04_仿真/仿真环境/cuadc_rescue_sim                  → jetson:cuadc_ws/src/cuadc_rescue_sim
-  02_飞控与硬件/调试工具/{11 个 Jetson 侧脚本}        → jetson:~/
+  02_飞控与硬件/调试工具/{12 个 Jetson 侧脚本}        → jetson:~/
 排除：__pycache__、*.pyc、*.exe、*.pdb（Windows 构建产物）。
 换行符：仓库 .gitattributes 钉死 LF（代码要上 Jetson）；Jetson 侧 CRLF 残留会判 DIFF，
 push 即以仓库 LF 版覆盖——这正是 09-19 rescue_sim 整包 CRLF 污染的修法。
@@ -44,7 +44,7 @@ TREE_MAPS = [
 LOOSE_FILES = ["fc_dryrun.sh", "fc_armrun.sh", "fc_armtest.sh", "fc_servo_test.sh",
                "fc_servo_diag.sh", "fc_log_pull.py", "sih_jetson_build.sh",
                "bench_logger.py", "bench_drop.py", "gcs_pump.py",
-               "recon_bench_onekey.sh"]
+               "recon_bench_onekey.sh", "fc_mission_onekey.py"]
 EXCL_DIRS = {"__pycache__"}
 EXCL_SUFFIX = (".pyc", ".exe", ".pdb")
 

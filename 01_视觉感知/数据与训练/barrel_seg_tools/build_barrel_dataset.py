@@ -186,8 +186,9 @@ def main():
                 f'实拍 {n_real} 张（无标签背景帧 {n_orphan} → 空标签）\n'
                 f'- 切分：合成随机 5% / 实拍按**片段** {args.val_frac:.0%}'
                 f'（连续帧不跨集，防验证泄题）\n'
-                + (f'- 钉扎 train 片段: {", ".join(args.pin_train)}\n' if args.pin_train else '')
-                f'- train {len(train)} / val {len(val)}，总计 {copied}，'
+                + (f'- 钉扎 train 片段: {", ".join(args.pin_train)}\n'
+                   if args.pin_train else '')
+                + f'- train {len(train)} / val {len(val)}，总计 {copied}，'
                 f'空标签 {empty_lbl}\n'
                 f'- 类别：0 = barrel（单类；三档筒径 15/20/25cm 不分类别，'
                 f'直径由感知端反算对号）\n'

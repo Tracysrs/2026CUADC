@@ -12,7 +12,15 @@
     # ---- 相机内参（五件套之三）：比赛模式 allow_uncalibrated 必须 false ----
     calib_path: /home/nvidia/cuadc_models/camera_calib.yaml
     allow_uncalibrated: true
-    mount_rot_deg: 0.0        # 装订旋转，首次悬停偏置目标实验标定后回填
+    # ---- 相机安装外参（03_机载软件/外参测量清单_相机与投放口.md，2026-09-29 卡尺粗测）----
+    mount_rot_deg: 0.0        # A4 图像上方相对机头偏转：粗测 0（装正）
+    mount_pitch_deg: 0.0      # A5 光轴朝机头倾为+：粗测 0
+    mount_roll_deg: 0.0       # A6 光轴朝机体左倾为+：粗测 0
+    mount_offset_m: [0.09065, 0.0, -0.047286]
+    # A1~A3 光心机体系(前,左,上) m：镜头端面在飞控原点前方 90.65mm、左右 0、
+    # 低于飞控原点 47.286mm（2026-09-29 复测，首轮 2.86mm 系量法有误已作废；
+    # 光心在端面上方 3~4mm，差异 ≤4mm 对定位影响忽略，按端面值填）
+    # 待台架多高度+姿态扫描验证后回填精确值
 
     # ---- 高度来源（单目解算，P0.4 同源容差）----
     odom_topic: /mavros/local_position/odom

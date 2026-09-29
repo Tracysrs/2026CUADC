@@ -411,7 +411,7 @@ private:
     declare_parameter<double>("align_reacquire_window_s", 4.0);
 
     // ---- M3 载荷与舵机 ----
-    declare_parameter<std::string>("drop_order", "conservative");  // 先大筒保底
+    declare_parameter<std::string>("drop_order", "conservative");  // pair_23 先大保底（默认）
     declare_parameter<std::vector<double>>(
       "payload_offset_1", std::vector<double>{0.0, 0.0});          // §6 标定后填
     declare_parameter<std::vector<double>>(
@@ -575,7 +575,7 @@ private:
 
     // ---- M3 载荷与舵机 ----
     drop_order_ = get_parameter("drop_order").as_string();
-    if (drop_order_ != "conservative" && drop_order_ != "aggressive") {
+    if (cuadc_drop::drop_order_sequence(drop_order_).empty()) {
       RCLCPP_WARN(get_logger(), "drop_order 非法(%s)，回退 conservative", drop_order_.c_str());
       drop_order_ = "conservative";
     }

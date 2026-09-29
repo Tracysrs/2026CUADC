@@ -173,6 +173,43 @@ static void test_locking()
     CHECK(sorted[0].diameter_class == 2);
     CHECK(sorted[2].diameter_class == 0);
   }
+  {   // pair_13（2026-09-29 扩三组合）：1号→3号→2号跳中筒，前两载荷 = {15,25} = 600 分档
+    BucketMap m = make_three();
+    m.try_lock(0.3);
+    const auto r = m.try_lock(1.1);
+    const auto sorted = sorted_targets(r.targets, "pair_13");
+    CHECK(sorted[0].diameter_class == 0);
+    CHECK(sorted[1].diameter_class == 2);
+    CHECK(sorted[2].diameter_class == 1);
+  }
+  {   // 新旧名别名同序：conservative≡pair_23，aggressive≡pair_12
+    BucketMap m = make_three();
+    m.try_lock(0.3);
+    const auto r = m.try_lock(1.1);
+    const auto a = sorted_targets(r.targets, "conservative");
+    const auto b = sorted_targets(r.targets, "pair_23");
+    const auto c = sorted_targets(r.targets, "aggressive");
+    const auto d = sorted_targets(r.targets, "pair_12");
+    for (std::size_t i = 0; i < a.size(); ++i) {
+      CHECK(a[i].tid == b[i].tid);
+      CHECK(c[i].tid == d[i].tid);
+    }
+  }
+  {   // 非法 drop_order → 序列表为空、排序回退 conservative；未知筒（-1）恒垫底
+    BucketMap m = make_three();
+    m.try_lock(0.3);
+    const auto r = m.try_lock(1.1);
+    CHECK(drop_order_sequence("nonsense").empty());
+    CHECK(drop_order_sequence("pair_13").size() == 3);
+    FrozenTarget unk;
+    unk.tid = 9; unk.frozen_diameter = 0.18; unk.diameter_class = -1;
+    auto ts = r.targets;
+    ts.push_back(unk);
+    const auto s = sorted_targets(ts, "pair_13");
+    CHECK(s[s.size() - 1].tid == 9);
+    const auto bad = sorted_targets(ts, "nonsense");
+    CHECK(bad[0].diameter_class == 2);
+  }
   {   // 正式模式：未知筒剔除
     BucketMap m = make_three();
     feed(m, repeat(11.0, 1.0, 6), 0.18, 1.05);   // 先验内但对不上号
@@ -392,20 +429,23 @@ static void test_sequencer_and_aim()
     CHECK(s.tick(0.70) == SeqResult::kStow);
     CHECK(!s.hold_elapsed(0.80));              // STOWED 后恒假
   }
-  {   // 瞄准点 = 冻结估计 + 偏置旋转（yaw=0 → 前向偏置 → +x）
+  {   // 瞄准点 = 冻结估计 − 偏置旋转（投放口伸出方向的反侧；yaw=0 → 前向偏置 → −x）
+      // 2026-09-30 符号修正：offset = 投放口机体系位置（SSOT §6 正语义），机体
+      // 须停在桶的反侧才能让伸出偏置对准桶，原 + 号断言随实现一并修正。
     FrozenTarget tg;
     tg.working_x = 10.0;
     tg.working_y = 0.0;
     const auto a = aim_point(tg, 0.05, 0.0, 0.0, 0.0, 0.0, GateParams{});
-    CHECK_NEAR(a.ax, 10.05, 1e-9);
+    CHECK_NEAR(a.ax, 9.95, 1e-9);
     CHECK_NEAR(a.ay, 0.0, 1e-9);
   }
-  {   // lead 超限被钳到 sanity 上限
+  {   // lead 超限被钳到 sanity 上限（aim 中取减号，lead 返回值仍为幅值向量）
     FrozenTarget tg;
     tg.working_x = 0.0;
     tg.working_y = 0.0;
     const auto a = aim_point(tg, 0.0, 0.0, 0.0, 5.0, 0.0, GateParams{});
     CHECK_NEAR(std::hypot(a.lead_x, a.lead_y), 0.15, 1e-9);
+    CHECK_NEAR(a.ax, -a.lead_x, 1e-9);         // 5m/s 超限 → 钳位 0.15 后取减号
   }
 }
 

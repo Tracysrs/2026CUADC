@@ -134,9 +134,11 @@ cuadc_mission:
     align_reacquire_window_s: 4.0    # 丢目标后重捕获等待窗（合计容忍 ≈5s 到达目标）
 
     # ==== M3 载荷与舵机 ====
-    drop_order: conservative         # conservative=先大筒保底 / aggressive=先小筒冲 800
-    payload_offset_1: [0.0, 0.0]     # 投放口偏置(机体系 x前 y左, m)——SSOT §6 两步法标定后填
-    payload_offset_2: [0.0, 0.0]
+    drop_order: conservative         # pair_23=3号→2号先大保底400分档(默认) / pair_13=1号→3号跳中筒600分档 /
+                                     # pair_12=1号→2号先小冲奖800分档；旧名 conservative/aggressive 同义
+    payload_offset_1: [0.0, 0.04515]     # 投放口偏置(机体系 x前 y左, m)：2026-09-29 卡尺实测
+    payload_offset_2: [0.0, -0.04515]    # 1/2 号口左右对称（测量清单 B1~B4）；语义=出瓶口
+                                         # 在机体系的位置(正)，aim_point 内取减号对准
     servo_channel_1: 9               # AUX1..4 对应 SERVO9..12
     servo_channel_2: 10
     servo_stowed_pwm: 1100.0         # 收拢

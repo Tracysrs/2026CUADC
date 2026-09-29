@@ -41,6 +41,7 @@ from drop_logic import (
     TargetTracker,
     TrackParams,
     aim_point,
+    sorted_targets,
 )
 
 NOMINAL = (0.15, 0.20, 0.25)
@@ -70,7 +71,7 @@ class SimParams:
     mission_yaw: float = 0.0            # 锁定航向（全程锁头不转机头）
     payload_offset_body: Tuple[float, float] = (0.03, 0.01)   # §6 标定偏置
     n_payloads: int = 2                 # 比赛 = 两瓶（1 号筒 + 2 号筒）；仿真可调 3 做压力
-    drop_order: str = 'conservative'    # conservative=先大后小 / aggressive
+    drop_order: str = 'conservative'    # pair_23=先大保底(默认) / pair_13=跳中筒 / pair_12=先小冲奖；旧名 conservative/aggressive 同义
     t_max_s: float = 200.0
 
 
@@ -126,12 +127,9 @@ class EpisodeResult:
 
 
 def _sorted_targets(targets: List[FrozenTarget], order: str) -> List[FrozenTarget]:
-    """conservative=直径类降序（先大筒保底）；aggressive=升序（先小筒冲 800 分）。
-    未知类（-1）排最后。"""
-    known = [t for t in targets if t.diameter_class >= 0]
-    unknown = [t for t in targets if t.diameter_class < 0]
-    known.sort(key=lambda t: t.diameter_class, reverse=(order == 'conservative'))
-    return known + unknown
+    """委托 drop_logic.sorted_targets（hpp 镜像，与 mission_node 同一实现——
+    档位优先序 pair_23/pair_13/pair_12 + 旧名别名，未知类垫底）。"""
+    return sorted_targets(targets, order)
 
 
 def _waypoint(lane_ys: List[float], idx: int) -> Tuple[float, float]:

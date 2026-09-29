@@ -680,23 +680,56 @@ inline AimResult aim_point(const FrozenTarget & frozen,
     lead.first *= p.max_lead_m / norm;
     lead.second *= p.max_lead_m / norm;
   }
-  return AimResult{frozen.working_x + ox + lead.first,
-    frozen.working_y + oy + lead.second, lead.first, lead.second};
+  // 2026-09-30 符号修正：offset 语义 = 投放口在机体系的位置（SSOT §6 铅垂线标定
+  // 正语义），投放口从机体伸出 → 机体参考点须停在桶的反侧；瓶脱离后沿速度方向
+  // 前漂 v·√(2h/g) → 释放点在桶上游。故两项均取减号（原 + 号把两者各放大 2 倍反向，
+  // 被 payload_offset=[0,0]+悬停释放掩盖；offset≠0 或残余速度下 8~9cm 级落点偏差）。
+  return AimResult{frozen.working_x - ox - lead.first,
+    frozen.working_y - oy - lead.second, lead.first, lead.second};
 }
 
-/// 冻结集排序：conservative=直径类降序（先大筒保底）；aggressive=升序；未知排最后。
+/// drop_order → 直径档优先序（diameter_class 序列）。规则 3.1.2 筒号即直径：
+/// 1号=15cm=class0(500分)、2号=20cm=class1(300分)、3号=25cm=class2(100分)。
+///   pair_23（旧名 conservative）：3号→2号→1号，先大保底 = 400 分档（默认）
+///   pair_12（旧名 aggressive）：  1号→2号→3号，先小冲奖 = 800 分档
+///   pair_13：                    1号→3号→2号，跳过中筒 = 600 分档
+/// 中+中组合不存在：规则 3.1.2 场上每规格仅一筒，6.1.2 同区双投只算一次。
+inline std::vector<int> drop_order_sequence(const std::string & drop_order)
+{
+  if (drop_order == "conservative" || drop_order == "pair_23") {
+    return {2, 1, 0};
+  }
+  if (drop_order == "aggressive" || drop_order == "pair_12") {
+    return {0, 1, 2};
+  }
+  if (drop_order == "pair_13") {
+    return {0, 2, 1};
+  }
+  return {};  // 非法 → 空表，调用方与 sorted_targets 均回退 conservative
+}
+
+/// 冻结集排序：按 drop_order 优先序（drop_order_sequence），同档位直径大者先，
+/// 未知类（-1）排最后。
 inline std::vector<FrozenTarget> sorted_targets(std::vector<FrozenTarget> targets,
   const std::string & drop_order)
 {
+  std::vector<int> order = drop_order_sequence(drop_order);
+  if (order.empty()) { order = drop_order_sequence("conservative"); }
+  auto rank = [&order](int cls) {
+    for (size_t i = 0; i < order.size(); ++i) {
+      if (order[i] == cls) { return static_cast<int>(i); }
+    }
+    return static_cast<int>(order.size());
+  };
   std::vector<FrozenTarget> known, unknown;
   for (auto & t : targets) {
     (t.diameter_class >= 0 ? known : unknown).push_back(t);
   }
   std::sort(known.begin(), known.end(),
-    [&drop_order](const FrozenTarget & a, const FrozenTarget & b) {
-      if (a.diameter_class != b.diameter_class) {
-        return drop_order == "conservative" ?
-               a.diameter_class > b.diameter_class : a.diameter_class < b.diameter_class;
+    [&rank](const FrozenTarget & a, const FrozenTarget & b) {
+      const int ra = rank(a.diameter_class), rb = rank(b.diameter_class);
+      if (ra != rb) {
+        return ra < rb;
       }
       return a.frozen_diameter > b.frozen_diameter;
     });

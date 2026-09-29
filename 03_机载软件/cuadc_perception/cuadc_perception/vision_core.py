@@ -86,10 +86,14 @@ class Intrinsics:
     @classmethod
     def from_fov(cls, width: int, height: int, hfov_rad: float,
                  vfov_rad: Optional[float] = None) -> 'Intrinsics':
-        """由视场角推导（BL-500W-335：H81.8°/V66° → 1080p 下 fx≈1112/fy≈831）。
+        """由视场角推导（BL-500W-335：H81.8°/V66° → 1080p 下 fx≈1106/fy≈831）。
 
         vfov 缺省时按方像素 fy=fx 处理（4:3 全幅）；16:9 裁剪必须同时给 H/V 两个
         视场角，否则 fy 被高估 ~34%（2026-09 调研发现，勿省）。
+        2026-09-30 规格表收讫后加口径警示：H/V 正切比 1.337≈4:3，系 4:3 全幅口径；
+        若 16:9 输出为保宽裁高（USB 模组主流），真实 VFOV≈55° → fy≈1037 而非 831
+        （差 25%，直接进前向定位）。且规格表自身不自洽（H 反推 f=3.0mm≠2.8mm、
+        D105° 与 H/V 推 94.3° 矛盾）——FOV 兜底仅调试用，定案必须棋盘标定。
         """
         fx = (width / 2.0) / math.tan(hfov_rad / 2.0)
         fy = fx if vfov_rad is None else (height / 2.0) / math.tan(vfov_rad / 2.0)
@@ -355,22 +359,51 @@ def hough_h_detect(bgr: np.ndarray, fx: float, h_m: float,
 # ---------------------------------------------------------------------------
 def ellipse_to_body(u: float, v: float, a_px: float, b_px: float,
                     intr: Intrinsics, h_m: float, plane_z_m: float,
-                    mount_rot_deg: float = 0.0) -> Tuple[float, float, float, float]:
-    """像素椭圆 → 机体系 (FLU)。
+                    mount_rot_deg: float = 0.0,
+                    mount_pitch_deg: float = 0.0, mount_roll_deg: float = 0.0,
+                    mount_offset_m: Sequence[float] = (0.0, 0.0, 0.0)
+                    ) -> Tuple[float, float, float, float]:
+    """像素椭圆 → 机体系 (FLU)，含相机安装外参（外参测量清单 A1~A6）。
 
-    h_m = 相机离目标平面的高度（= odom_z − plane_z_m）；返回 z = −h_m（目标在下方）。
-    mount_rot_deg = 装订旋转：图像 (du,dv) 先旋转再投影（默认 0 = 图像上=机头、
-    图像左=机体左）。首次悬停偏置目标实验标定（设计文档 §4.6）。
-    直径：两轴分别按各自焦距折算再平均（16:9 下 fx≠fy）。
+    h_m = 相机光心离目标平面的垂直高度（节点侧 = 机体原点离平面高 + 光心 z 偏置）；
+    返回 z = 桶口平面相对机体原点高度 = −(h_m − tz)，目标在下方为负。
+    mount_rot_deg = 装订旋转（yaw 类）：图像 (du,dv) 先旋转再投影（默认 0 = 图像上=
+    机头、图像左=机体左）。首次悬停偏置目标实验标定（设计文档 §4.6）。
+    mount_pitch_deg = 光轴朝机头方向倾为 +；mount_roll_deg = 朝机体左倾为 +
+    （测量清单 A5/A6 口径）；安装角按小角处理，与 yaw 及相互耦合忽略。
+    mount_offset_m = 相机光心在机体系 (前, 左, 上) 位置 m（A1~A3，下视相机 z 为负）；
+    解算 = 光心位置 + 像素射线与桶口平面的交点，倾斜时光轴不再垂直于平面。
+    直径：两轴分别按各自焦距折算再平均（16:9 下 fx≠fy），用沿射线距离（斜距）。
+    全部新参数默认 0，行为与旧版逐字节一致。
     """
     du, dv = u - intr.cx, v - intr.cy
     if mount_rot_deg:
         du, dv = rotate2d(du, dv, mount_rot_deg)
-    x = -dv * h_m / intr.fy            # 图像上方 = 机头（默认装订）
-    y = -du * h_m / intr.fx            # 图像左方 = 机体左
-    z = -(h_m)
-    diam_m = 0.5 * h_m * (a_px / intr.fx + b_px / intr.fy)
-    return x, y, z, diam_m
+    tx, ty, tz = (float(c) for c in mount_offset_m)
+    z_plane = -(h_m - tz)              # 桶口平面相对机体原点（h_m 含 tz 时恒成立）
+    dx = -dv / intr.fy                 # 像素射线方向（机体系，理想装订）
+    dy = -du / intr.fx                 # 图像上方 = 机头、图像左方 = 机体左
+    dz = -1.0
+    if mount_pitch_deg or mount_roll_deg:
+        dx, dy, dz = tilt3d(dx, dy, dz, mount_pitch_deg, mount_roll_deg)
+    s = (z_plane - tz) / dz            # 沿射线到平面的距离（无倾斜时 = h_m）
+    x = tx + s * dx
+    y = ty + s * dy
+    diam_m = 0.5 * s * (a_px / intr.fx + b_px / intr.fy)
+    return x, y, z_plane, diam_m
+
+
+def tilt3d(x: float, y: float, z: float,
+           pitch_deg: float, roll_deg: float) -> Tuple[float, float, float]:
+    """机体系射线方向加安装倾斜：先绕机体 x（roll，朝左倾 +）后绕 y
+    （pitch 取负角，朝机头倾 +）。输入方向无需单位化（交点比值不变）。"""
+    ph = math.radians(roll_deg)
+    th = math.radians(pitch_deg)
+    y1 = y * math.cos(ph) - z * math.sin(ph)
+    z1 = y * math.sin(ph) + z * math.cos(ph)
+    x2 = x * math.cos(th) - z1 * math.sin(th)
+    z2 = x * math.sin(th) + z1 * math.cos(th)
+    return x2, y1, z2
 
 
 def rotate2d(du: float, dv: float, deg: float) -> Tuple[float, float]:

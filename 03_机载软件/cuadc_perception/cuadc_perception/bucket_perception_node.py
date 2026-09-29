@@ -35,7 +35,15 @@ from std_msgs.msg import Header, String
 
 from cuadc_perception import vision_core as vc
 
-# datasheet 兜底内参（BL-500W-335：H81.8°/V66°，1080p 16:9 裁剪下 fx≈1108/fy≈831）
+# datasheet 兜底内参（BL-500W-335 规格表 2026-09-30 收讫核对：镜头 2.8mm、
+# 像元 2.0µm、最高 2592×1944、H81.8°/V66°/D105°）。口径分歧警示（未实测不改数值）：
+#   ① H/V 正切比 1.337≈4:3 —— 系 4:3 全幅口径；16:9 若保宽裁高（USB 模组主流），
+#     真实 VFOV≈55° → fy≈1037，兜底 831 可能低估 25%（fy 进前向定位 x=-dv·h/fy，
+#     1.3m 悬停偏光心 200px 时前向误差 ≈6.2cm，污染外参验证实验归因）。
+#   ② 规格表内部不自洽：H81.8° 反推 f=3.0mm≠2.8mm；D105° 与 H/V 推 94.3° 矛盾。
+#   ③ fx 双口径 1037(物理量)~1106(角度直译) 差 6.6%，进直径折算与横向定位。
+#   兜底仅调试模式生效；比赛模式 allow_uncalibrated=False 无标定拒启。
+#   定案手段=棋盘标定；快速实测=悬停已知高度读已知直径桶（并入外参实验一）。
 _HFOV_RAD = 1.4279
 _VFOV_RAD = 1.1519
 
@@ -69,6 +77,10 @@ class BucketPerceptionNode(Node):
         self.declare_parameter('calib_path', '/home/nvidia/cuadc_models/camera_calib.yaml')
         self.declare_parameter('allow_uncalibrated', True)
         self.declare_parameter('mount_rot_deg', 0.0)   # 装订旋转，悬停偏置目标实验标定
+        # ---- 相机安装外参（03_机载软件/外参测量清单_相机与投放口.md，2026-09-29 首测）----
+        self.declare_parameter('mount_pitch_deg', 0.0)   # A5 光轴朝机头方向倾为 +
+        self.declare_parameter('mount_roll_deg', 0.0)    # A6 光轴朝机体左倾为 +
+        self.declare_parameter('mount_offset_m', [0.0, 0.0, 0.0])  # A1~A3 光心机体系(前,左,上) m
 
         # ---- 高度来源（单目解算，SSOT §4.2 修正版）----
         self.declare_parameter('odom_topic', '/mavros/local_position/odom')
@@ -120,6 +132,12 @@ class BucketPerceptionNode(Node):
         self.plane_z = float(gp('plane_z_m').value)
         self.ground_z = float(gp('ground_z_offset').value)
         self.mount_rot = float(gp('mount_rot_deg').value)
+        self.mount_pitch = float(gp('mount_pitch_deg').value)
+        self.mount_roll = float(gp('mount_roll_deg').value)
+        _mo = list(gp('mount_offset_m').value)
+        if len(_mo) != 3:
+            raise ValueError(f'mount_offset_m 需 3 项(前,左,上)，实得 {len(_mo)}')
+        self.mount_offset = tuple(float(v) for v in _mo)
         self.max_delay = float(gp('odom_max_delay_s').value)
         self.future_tol = float(gp('odom_future_tol_s').value)
         self.max_gap = float(gp('odom_max_gap_s').value)
@@ -201,7 +219,9 @@ class BucketPerceptionNode(Node):
         self.get_logger().info(
             f'白桶感知就绪: 通道={"seg+LAB" if self.model else "LAB-only(主通道未就绪)"}, '
             f'平面z={self.plane_z:.2f}m, min_conf={self.min_conf}, '
-            f'active_states={self.active_states or "全态"}')
+            f'active_states={self.active_states or "全态"}, '
+            f'外参: 偏移={tuple(round(v, 4) for v in self.mount_offset)}m, '
+            f'rot/pitch/roll={self.mount_rot:.1f}/{self.mount_pitch:.1f}/{self.mount_roll:.1f}°')
 
     # ---------------- 主通道 engine（可选加载） ----------------
     def _load_engine_optional(self, engine_path, expected_sha, imgsz, conf):
@@ -316,7 +336,8 @@ class BucketPerceptionNode(Node):
                 throttle_duration_sec=5.0)
             self._publish([], t_frame)
             return
-        h_m = max(0.10, oz - self.ground_z - self.plane_z)
+        # 光心离桶口平面垂直高度 = 机体原点离平面高 + 光心 z 偏置（下视相机 z 为负）
+        h_m = max(0.10, oz - self.ground_z + self.mount_offset[2] - self.plane_z)
 
         # ---- 双通道 ----
         main_dets = self._detect_main(frame)
@@ -327,7 +348,8 @@ class BucketPerceptionNode(Node):
         body = []
         for d in fused:
             x, y, z, diam = vc.ellipse_to_body(
-                d.u, d.v, d.a_px, d.b_px, intr, h_m, self.plane_z, self.mount_rot)
+                d.u, d.v, d.a_px, d.b_px, intr, h_m, self.plane_z, self.mount_rot,
+                self.mount_pitch, self.mount_roll, self.mount_offset)
             body.append(vc.BodyDet(x=x, y=y, z=z, diam_m=diam, conf=d.conf,
                                    source=d.source, u=d.u, v=d.v))
         body = vc.merge_same_frame(body, merge_dist_m=self.merge_dist)

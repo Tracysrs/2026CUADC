@@ -482,9 +482,13 @@ class DropSequencer:
 def aim_point(frozen: FrozenTarget, offset_body_xy: Tuple[float, float],
               mission_yaw: float, vx: float, vy: float,
               params: GateParams) -> Tuple[float, float, float, float]:
-    """瞄准点 = 冻结时刻的活动估计 + 标定投放口偏置（机体系→世界，用锁定航向）
-    + 弹道前移（带 sanity 钳位）。返回 (ax, ay, lead_x, lead_y)。
-    标定偏置来源：SSOT §6 两步法（静态铅垂线中位数 + 试投中位数修正 + MAD）。"""
+    """瞄准点 = 冻结时刻的活动估计 − 标定投放口偏置（机体系→世界，用锁定航向）
+    − 弹道前移（带 sanity 钳位）。返回 (ax, ay, lead_x, lead_y)。
+    标定偏置来源：SSOT §6 两步法（静态铅垂线中位数 + 试投中位数修正 + MAD），
+    语义 = 投放口在机体系的位置（正语义）；投放口从机体伸出 → 机体参考点停在桶
+    反侧，瓶脱离后沿速度方向前漂 → 释放点在桶上游，故两项取减号。
+    2026-09-30 符号修正：原 + 号把两项各放大 2 倍反向，被 offset=[0,0]+悬停释放
+    掩盖（offset≠0 或残余速度下 8~9cm 级落点偏差）。与 hpp 同步修（双端纪律）。"""
     c, s = math.cos(mission_yaw), math.sin(mission_yaw)
     ox = c * offset_body_xy[0] - s * offset_body_xy[1]
     oy = s * offset_body_xy[0] + c * offset_body_xy[1]
@@ -492,4 +496,36 @@ def aim_point(frozen: FrozenTarget, offset_body_xy: Tuple[float, float],
     norm = math.hypot(lx, ly)
     if norm > params.max_lead_m and norm > 0:
         lx, ly = lx * params.max_lead_m / norm, ly * params.max_lead_m / norm
-    return frozen.working_x + ox + lx, frozen.working_y + oy + ly, lx, ly
+    return frozen.working_x - ox - lx, frozen.working_y - oy - ly, lx, ly
+
+
+# ===========================================================================
+# 冻结集排序（hpp sorted_targets/drop_order_sequence 镜像；drop_sim 委托本实现）
+# ===========================================================================
+def drop_order_sequence(drop_order: str) -> List[int]:
+    """drop_order → 直径档优先序（diameter_class 序列）。规则 3.1.2 筒号即直径：
+    1号=15cm=class0(500分)、2号=20cm=class1(300分)、3号=25cm=class2(100分)。
+    pair_23（旧名 conservative）= 3号→2号→1号先大保底 400 分档（默认）；
+    pair_12（旧名 aggressive）= 1号→2号→3号先小冲奖 800 分档；
+    pair_13 = 1号→3号→2号跳过中筒 600 分档。非法值返回 []（调用方回退 conservative）。"""
+    if drop_order in ('conservative', 'pair_23'):
+        return [2, 1, 0]
+    if drop_order in ('aggressive', 'pair_12'):
+        return [0, 1, 2]
+    if drop_order == 'pair_13':
+        return [0, 2, 1]
+    return []
+
+
+def sorted_targets(targets: List[FrozenTarget],
+                   drop_order: str) -> List[FrozenTarget]:
+    """冻结集排序：按 drop_order 优先序，同档位直径大者先，未知类（-1）排最后。"""
+    order = drop_order_sequence(drop_order) or drop_order_sequence('conservative')
+
+    def rank(cls: int) -> int:
+        return order.index(cls) if cls in order else len(order)
+
+    known = [t for t in targets if t.diameter_class >= 0]
+    unknown = [t for t in targets if t.diameter_class < 0]
+    known.sort(key=lambda t: (rank(t.diameter_class), -t.frozen_diameter))
+    return known + unknown

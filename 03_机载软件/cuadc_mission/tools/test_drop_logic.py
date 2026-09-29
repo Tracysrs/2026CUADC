@@ -22,6 +22,8 @@ from drop_logic import (
     TrackParams,
     aim_point,
     ballistic_lead,
+    drop_order_sequence,
+    sorted_targets,
 )
 
 
@@ -318,12 +320,14 @@ class TestSequencerAndAim(unittest.TestCase):
 
     def test_aim_composes_offset_rotation_and_lead(self):
         """yaw=0（机头指向世界 +x）：机体系前向偏置应转到世界 +x。
-        约定与 mission_node 一致：yaw 自 +x 起 CCW，body→local 为 c/s 旋转。"""
+        约定与 mission_node 一致：yaw 自 +x 起 CCW，body→local 为 c/s 旋转。
+        2026-09-30 符号修正：offset = 投放口机体系位置（SSOT §6 正语义），
+        机体须停在桶的反侧才能让伸出偏置对准桶 → aim 取减号（镜像 hpp 用例）。"""
         tg = FrozenTarget(tid=0, frozen_x=10.0, frozen_y=0.0, frozen_diameter=0.2,
                           diameter_class=1, working_x=10.0, working_y=0.0,
                           last_vision_t=0.0)
         ax, ay, lx, ly = aim_point(tg, (0.05, 0.0), 0.0, 0.0, 0.0, GateParams())
-        self.assertAlmostEqual(ax, 10.05, places=9)    # 前向偏置 → +x
+        self.assertAlmostEqual(ax, 9.95, places=9)     # 前向偏置 → 机体停在 −x 侧
         self.assertAlmostEqual(ay, 0.0, places=9)
 
     def test_aim_lead_clamped(self):
@@ -332,6 +336,65 @@ class TestSequencerAndAim(unittest.TestCase):
                           last_vision_t=0.0)
         ax, ay, lx, ly = aim_point(tg, (0.0, 0.0), 0.0, 5.0, 0.0, GateParams())
         self.assertAlmostEqual(math.hypot(lx, ly), 0.15)   # 钳到 sanity 上限
+        self.assertAlmostEqual(ax, -lx, places=9)          # aim 中取减号
+
+
+class TestSortedTargets(unittest.TestCase):
+    """投放档位优先序（2026-09-29 扩三组合）：pair_23/13/12 + 旧名别名。
+    与 test_drop_logic.cpp 的排序用例镜像（双端纪律）。"""
+
+    @staticmethod
+    def _three():
+        """class 0/1/2 各一（15/20/25cm），tid 即 class 便于断言。"""
+        return [FrozenTarget(tid=c, frozen_x=10.0 + c, frozen_y=0.0,
+                             frozen_diameter=0.15 + 0.05 * c, diameter_class=c,
+                             working_x=10.0 + c, working_y=0.0, last_vision_t=0.0)
+                for c in (0, 1, 2)]
+
+    def test_pair_13_skips_middle_bucket(self):
+        """pair_13 = 1号→3号→2号：前两载荷 = {15cm,25cm} = 600 分档。"""
+        s = sorted_targets(self._three(), 'pair_13')
+        self.assertEqual([t.diameter_class for t in s], [0, 2, 1])
+
+    def test_pair_23_and_conservative_alias(self):
+        """pair_23 ≡ conservative：先大保底（3号→2号→1号）。"""
+        a = sorted_targets(self._three(), 'conservative')
+        b = sorted_targets(self._three(), 'pair_23')
+        self.assertEqual([t.tid for t in a], [2, 1, 0])
+        self.assertEqual([t.tid for t in b], [t.tid for t in a])
+
+    def test_pair_12_and_aggressive_alias(self):
+        """pair_12 ≡ aggressive：先小冲奖（1号→2号→3号），前两载荷 = 800 分档。"""
+        a = sorted_targets(self._three(), 'aggressive')
+        b = sorted_targets(self._three(), 'pair_12')
+        self.assertEqual([t.tid for t in a], [0, 1, 2])
+        self.assertEqual([t.tid for t in b], [t.tid for t in a])
+
+    def test_invalid_order_falls_back_conservative(self):
+        """非法值 → sorted_targets 与 drop_order_sequence 均回退 conservative。"""
+        self.assertEqual(drop_order_sequence('nonsense'), [])
+        s = sorted_targets(self._three(), 'nonsense')
+        self.assertEqual([t.tid for t in s], [2, 1, 0])
+
+    def test_unknown_class_last_in_all_orders(self):
+        """未知筒（class -1）恒垫底，已知筒按序排。"""
+        unk = FrozenTarget(tid=9, frozen_x=0.0, frozen_y=0.0, frozen_diameter=0.18,
+                           diameter_class=-1, working_x=0.0, working_y=0.0,
+                           last_vision_t=0.0)
+        for order in ('pair_23', 'pair_13', 'pair_12', 'nonsense'):
+            s = sorted_targets(self._three() + [unk], order)
+            self.assertEqual(s[-1].tid, 9, msg=order)
+
+    def test_tie_break_bigger_frozen_diameter_first(self):
+        """同档位（0.18/0.22cm 均就近对号 20cm 类，容差 ±3.5cm）直径大者先。"""
+        a = FrozenTarget(tid=1, frozen_x=0.0, frozen_y=0.0, frozen_diameter=0.18,
+                         diameter_class=1, working_x=0.0, working_y=0.0,
+                         last_vision_t=0.0)
+        b = FrozenTarget(tid=2, frozen_x=1.0, frozen_y=0.0, frozen_diameter=0.22,
+                         diameter_class=1, working_x=1.0, working_y=0.0,
+                         last_vision_t=0.0)
+        s = sorted_targets([a, b], 'pair_13')
+        self.assertEqual([t.tid for t in s], [2, 1])   # 同 class → 直径大者先
 
 
 if __name__ == '__main__':

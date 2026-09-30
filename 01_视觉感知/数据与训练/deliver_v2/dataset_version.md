@@ -67,3 +67,12 @@
 - **训练**:AutoDL 4090 脚本 v2训练流水线/run_v31_training.sh(yolov8n COCO 直训 100ep/imgsz640/batch16/seed0/patience30/hsv_h0.005/flipud0.5/close_mosaic10;上传 hazard_v31_fusion.zip+脚本即可,脚本 sed 重写 path 行并校验 4696/58);本机 CPU 备选同参约 14h。
 - **评估闸门基线**(03_机载软件/scripts/recon_eval.py):genseq 序列×2 seed(_reconeval/seq_s7、seq_s8,48 窗×20 帧@5Hz,v∈[0,3]m/s);现役 v2 detect+replay×2 已跑——**v2 对合成域近乎全盲**(s7 960 帧仅 48 帧=5% 过 0.7 门控,窗级 0 确认→两 seed 全留空 0 错填;s8 外推组合救回 1 窗 2%),主因=v2 只吃过哈工大实拍从未见合成渲染背景+640 推理下标识仅 ~19px。此为「改造前」画像;**融合开关(best_k/外推)准入裁决以 v3.1 模型 detect→replay 真数字为准**(判据=留空率显著降+错填率≈0,通过才翻 hazard_recon_node 默认并同步 SSOT §4.4)。
 - **验收红线**:逐类 mAP50≥0.90 无豁免;台架 A/B 终判(1.5 牌判 0 ≥0.8×6/6+双牌不互串+12 目标扫测),勿外推 val(09-28 教训);换模纪律=SHA 三处回填+bench 基准。
+
+## barrel_seg_v1 + hmarker_v1（白筒 seg / H 圆 det 第一版，2026-10-01 交付）
+
+- **数据**：barrel_h_ready_20260929 包（白名单外本地）——48 张筒图/94 多边形 + 15 张 H 圆框 + 116 张背景空标签；两张 v4 误检框错标帧（0036_frame_0020 套 H 字、0037_frame_0003 套篮球架）经标者 2026-10-01 确认**画面无筒**，已按负样本口径移入 backgrounds（json 清 shapes+空 txt，manifest 双表迁移），包自检与 dataset_audit 双 PASS；50→48 定稿过程见包内 `_quarantine_错标隔离_20260930/README.md`
+- **建集**：barrel_seg_v1 = 合成 1500（render_barrel_synthetic --blue-frac 0.5 蓝灰各半）+ 实拍 48 + 背景 114（建集时点数）按片段切分、0031 段钉 train（build_barrel_dataset.py --pin-train），train 1568/val 94；hmarker_v1 = 15 正 + 114 背景，val 钉 0037 整段（新脚本 build_hmarker_dataset.py --val-fragments），train 110/val 19
+- **训练**：AutoDL RTX 4090（torch 2.1.2+cu121），yolov8n-seg / yolov8n COCO 直训 100ep imgsz640 batch16 seed0 flipud0.5 hsv_h0.005 close_mosaic10；一键脚本 run_barrel_v1_autodl.sh（含四项数量对账）；本机 CPU 冒烟 10/30ep 先行验证流水线（Mask mAP50 0.960 / det 0.898）
+- **指标（GPU 100ep，val 94 图 200 实例 / 19 图 7 实例）**：白筒 seg Box mAP50 0.992 / **Mask mAP50 0.982**（P 0.984 / R 0.955 / mAP50-95 0.805）；H 圆 det **mAP50 0.995**（P 0.978 / R 1.000）。流水线口径验收线（mAP50≥0.90、R≥0.95）双过；**⚠️ val 实拍正样本仅 6/7 张，本版只证流水线与收敛，不作 SSOT M2 终验**
+- **权重**：`数据与训练/deliver_work/deliver_barrel/best.pt`（SHA-256 d94073df…）与 `deliver_work_hmarker/deliver_hmarker/best.pt`（289530e3…），均与包内 SHA256SUMS 逐字节核对一致（白名单外留本地）
+- **下一步**：外场实拍 ≥600 张（总单 G1）后同脚本正式版重训；上机 deploy_trt_jetson.sh bucket/hcircle 走台架 A/B；裸白封闭筒（0036_0121 等无垫封闭顶白物）身份待确认决定下版标注口径

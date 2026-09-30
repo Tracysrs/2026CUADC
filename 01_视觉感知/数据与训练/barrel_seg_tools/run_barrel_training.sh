@@ -6,6 +6,10 @@ set -euo pipefail
 
 DATA_DIR="${1:?用法: run_barrel_training.sh <数据集目录>}"
 OUT="${2:-deliver_work}"
+case "$OUT" in
+  /*) ;;                          # 已是绝对路径
+  *)  OUT="$PWD/$OUT" ;;          # ultralytics 8.4 会把相对 project 挂到 <cwd>/runs/segment/ 下，先绝对化
+esac
 EPOCHS="${EPOCHS:-100}"
 IMGSZ="${IMGSZ:-640}"
 BATCH="${BATCH:-16}"

@@ -33,6 +33,7 @@
 !/01_视觉感知/数据与训练/README.md
 !/01_视觉感知/数据与训练/build_real_data.py
 !/01_视觉感知/数据与训练/build_v3_dataset.py
+!/01_视觉感知/数据与训练/build_v32_dataset.py
 !/01_视觉感知/数据与训练/dataset_audit.py
 !/01_视觉感知/数据与训练/test_dataset_audit.py
 !/01_视觉感知/数据与训练/barrel_seg_tools/
@@ -40,6 +41,10 @@
 /01_视觉感知/数据与训练/v2训练流水线/*
 !/01_视觉感知/数据与训练/v2训练流水线/AutoDL租卡训练指南v2.md
 !/01_视觉感知/数据与训练/v2训练流水线/run_v2_training.sh
+!/01_视觉感知/数据与训练/v2训练流水线/run_v31_training.sh
+!/01_视觉感知/数据与训练/v2训练流水线/run_v32_training.sh
+!/01_视觉感知/数据与训练/v2训练流水线/_make_v32_upload_bundle.py
+!/01_视觉感知/数据与训练/v2训练流水线/AutoDL跑危化v32夜暗并训.md
 
 # 数据与训练/deliver_v2 与 hazard_hgd_10cls_v2：训练产物（权重/图表/日志）只留本地，
 # 仅放行版本台账 dataset_version.md（父目录须先放行才能再包含其中文件）

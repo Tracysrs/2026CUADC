@@ -37,8 +37,11 @@ from std_msgs.msg import Header, String
 
 from cuadc_perception import vision_core as vc
 
-_HFOV_RAD = 1.4279
-_VFOV_RAD = 1.1519
+# 兜底内参等效角（2026-10-01 棋盘标定定案 fx=1147.2/fy=1150.1，权威=~/cuadc_models/
+# camera_calib.yaml；旧 datasheet 角 1.4279/1.1519 已废，明细见外参测量清单
+# 与 bucket_perception_node 头注）
+_HFOV_RAD = 1.39360   # = 2·atan(960/1147.18)，回代 fx=1147.18@1920
+_VFOV_RAD = 0.87796   # = 2·atan(540/1150.07)，回代 fy=1150.07@1080
 # MAV_FRAME 枚举（MAVLink common）：8=BODY_NED（轴序与 FRD 相同）、12=BODY_FRD
 _MAV_FRAME_BODY_NED = 8
 _MAV_FRAME_BODY_FRD = 12

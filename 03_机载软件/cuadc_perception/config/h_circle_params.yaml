@@ -12,7 +12,7 @@
     # ---- 高度（H 圆贴地 → plane_z=0，只留地面偏置）----
     odom_topic: /mavros/local_position/odom
     calib_path: /home/nvidia/cuadc_models/camera_calib.yaml
-    allow_uncalibrated: true
+    allow_uncalibrated: false
     mount_rot_deg: 0.0        # 与桶节点同值：装订旋转一次标定两处共用
     ground_z_offset: 0.0
     odom_max_delay_s: 1.5

@@ -2,9 +2,11 @@
 # =============================================================================
 # TensorRT 部署一键脚本（在 Jetson 上运行）· 多模型版
 #
-# 用法：bash deploy_trt_jetson.sh <weights.pt> [slot] [基准帧数]
+# 用法：bash deploy_trt_jetson.sh <weights.pt> [slot] [基准帧数] [imgsz]
 #   slot ∈ recon(默认→best.engine) | bucket(→bucket.engine) | hcircle(→h_circle.engine)
-# 流程：.pt → TRT engine(FP16, imgsz 640) → 移入 ~/cuadc_models/<slot>.engine
+#   imgsz 默认 640；换模配方 832 时显式传 4 参（engine 与推理 imgsz 强绑定，
+#   2026-10-01 recon v3.2 换模=832：bash deploy_trt_jetson.sh best_v32.pt recon 200 832）
+# 流程：.pt → TRT engine(FP16, imgsz $IMGSZ) → 移入 ~/cuadc_models/<slot>.engine
 #       → SHA-256 登记入 SHA256SUMS.txt → bench_trt.py 实测
 #
 # 模型三件（设计文档 §3 架构）：
@@ -25,9 +27,10 @@
 # =============================================================================
 set -e
 
-W="${1:?用法: bash deploy_trt_jetson.sh <weights.pt> [slot] [基准帧数]}"
+W="${1:?用法: bash deploy_trt_jetson.sh <weights.pt> [slot] [基准帧数] [imgsz]}"
 SLOT="${2:-recon}"
 N="${3:-200}"
+IMGSZ="${4:-640}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MODELS_DIR="$HOME/cuadc_models"
 
@@ -42,8 +45,8 @@ esac
 pip install -q -i https://pypi.tuna.tsinghua.edu.cn/simple 'numpy<2' onnx onnxslim
 
 cd "$(dirname "$W")"
-echo "=== [$SLOT] 导出 TRT engine (FP16, imgsz 640)——约 10 分钟 ==="
-yolo export model="$W" format=engine half=True imgsz=640 device=0 exist_ok=True
+echo "=== [$SLOT] 导出 TRT engine (FP16, imgsz $IMGSZ)——约 10 分钟 ==="
+yolo export model="$W" format=engine half=True imgsz=$IMGSZ device=0 exist_ok=True
 
 RAW_ENGINE="${W%.pt}.engine"
 mkdir -p "$MODELS_DIR"

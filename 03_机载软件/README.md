@@ -18,8 +18,8 @@
 ### 侦察判读联调（不需要真模型/飞控）
 
 ```bash
-cp -r cuadc_interfaces cuadc_perception ~/ros2_ws/src/
-cd ~/ros2_ws && colcon build --packages-select cuadc_interfaces cuadc_perception
+cp -r cuadc_interfaces cuadc_perception ~/cuadc_ws/src/
+cd ~/cuadc_ws && colcon build --packages-select cuadc_interfaces cuadc_perception
 source install/setup.bash
 ros2 launch cuadc_perception fake_recon.launch.py                 # 假判读 + 查看器
 ros2 launch cuadc_perception fake_recon.launch.py scenario:=ambiguous   # 混淆拒识场景

@@ -11,7 +11,7 @@
 
     # ---- 相机内参（五件套之三）：比赛模式 allow_uncalibrated 必须 false ----
     calib_path: /home/nvidia/cuadc_models/camera_calib.yaml
-    allow_uncalibrated: true
+    allow_uncalibrated: false
     # ---- 相机安装外参（03_机载软件/外参测量清单_相机与投放口.md，2026-09-29 卡尺粗测）----
     mount_rot_deg: 0.0        # A4 图像上方相对机头偏转：粗测 0（装正）
     mount_pitch_deg: 0.0      # A5 光轴朝机头倾为+：粗测 0

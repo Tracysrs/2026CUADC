@@ -9,8 +9,9 @@
     image_qos_reliable: false
     engine_path: /home/nvidia/cuadc_models/best.engine
     # 防错拿错版本（SSOT §4.6）：engine 文件 SHA-256，换权重重建 engine 后必须同步更新
-    expected_sha256: "964cd588b2c24da0b11e16db87c6d59056bb43e63e69e21989dc688b500cc724"
-    imgsz: 640
+    # 2026-10-01 换模 v3.2（台架 A/B 五判据全过拍板）：v3.2@832，v2 三件 archive/v2_20261001
+    expected_sha256: "f09ae7e1fdf38a580a73e524fb3ce7bbea5643b884b72d899a0f7ce6af293e18"
+    imgsz: 832
     det_conf_thres: 0.10
     nms_iou: 0.60
     comp_iou: 0.45
@@ -23,9 +24,13 @@
     # 窗口融合
     window_duration_s: 4.0
     assoc_iou: 0.3
-    min_frames: 5
+    # 2026-10-01 换模同步翻转融合开关（recon_eval 裁决：错填率全程 0，确认率 21/34%→42/46%）：
+    # 外推关联 + best_k 聚合 + min_frames 4；代码默认值不动（默认关=旧版语义保持）
+    min_frames: 4
     min_median_conf: 0.8
     vote_ratio: 3.0
+    conf_agg: best_k
+    assoc_predict: true
     require_recon_state: true
     ack_delay_s: 0.05
     # 连续判读模式（2026-09-27）：RECON 态免握手滚动窗；握手保留仅作状态机进度

@@ -8,7 +8,9 @@
      记录预热后首帧耗时；
   4. 【稳态】黑帧连推 200 帧，统计平均延迟与 FPS（验收线 ≥25FPS）。
 
-用法：python3 bench_trt.py <engine 或 .pt 路径> [帧数]
+用法：python3 bench_trt.py <engine 或 .pt 路径> [帧数] [imgsz]
+  imgsz 缺省 640；832 等非 640 engine 必须显式传（engine 与输入尺寸强绑定，
+  2026-10-01 recon v3.2@832 换模实测：640 黑帧喂 832 engine 直接断言炸）。
 退出码 0 = 双验收线通过。TensorRT engine 与权重文件绑定+设备绑定，
 换权重/换设备必须重建 engine（SSOT §8.2）。
 """
@@ -22,29 +24,30 @@ from ultralytics import YOLO
 model_path = sys.argv[1] if len(sys.argv) > 1 else \
     '/home/nvidia/cuadc_models/yolov8n-seg.engine'
 N_STEADY = int(sys.argv[2]) if len(sys.argv) > 2 else 200
+IMGSZ = int(sys.argv[3]) if len(sys.argv) > 3 else 640
 
 t0 = time.time()
 model = YOLO(model_path)
 t_load = time.time() - t0
 
-black = np.zeros((640, 640, 3), dtype=np.uint8)   # 黑帧 = 上场前自检标准输入
+black = np.zeros((IMGSZ, IMGSZ, 3), dtype=np.uint8)   # 黑帧 = 上场前自检标准输入
 
 t1 = time.time()
-model.predict(black, imgsz=640, verbose=False)
+model.predict(black, imgsz=IMGSZ, verbose=False)
 t_cold = time.time() - t1                          # 冷启动首帧（未预热）
 
 t2 = time.time()
 for _ in range(3):                                 # 黑帧预热 3 次
-    model.predict(black, imgsz=640, verbose=False)
+    model.predict(black, imgsz=IMGSZ, verbose=False)
 t_preheat = time.time() - t2
 
 t3 = time.time()
-model.predict(black, imgsz=640, verbose=False)     # 预热后首帧（上场实测口径）
+model.predict(black, imgsz=IMGSZ, verbose=False)     # 预热后首帧（上场实测口径）
 t_first_warm = time.time() - t3
 
 t4 = time.time()
 for _ in range(N_STEADY):
-    model.predict(black, imgsz=640, verbose=False)
+    model.predict(black, imgsz=IMGSZ, verbose=False)
 dt_avg = (time.time() - t4) / N_STEADY
 fps = 1.0 / dt_avg
 

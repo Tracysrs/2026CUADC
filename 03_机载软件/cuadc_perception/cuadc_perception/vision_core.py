@@ -86,14 +86,15 @@ class Intrinsics:
     @classmethod
     def from_fov(cls, width: int, height: int, hfov_rad: float,
                  vfov_rad: Optional[float] = None) -> 'Intrinsics':
-        """由视场角推导（BL-500W-335：H81.8°/V66° → 1080p 下 fx≈1106/fy≈831）。
+        """由视场角推导 FOV 兜底内参（cx/cy 取画面中心）。
 
         vfov 缺省时按方像素 fy=fx 处理（4:3 全幅）；16:9 裁剪必须同时给 H/V 两个
         视场角，否则 fy 被高估 ~34%（2026-09 调研发现，勿省）。
-        2026-09-30 规格表收讫后加口径警示：H/V 正切比 1.337≈4:3，系 4:3 全幅口径；
-        若 16:9 输出为保宽裁高（USB 模组主流），真实 VFOV≈55° → fy≈1037 而非 831
-        （差 25%，直接进前向定位）。且规格表自身不自洽（H 反推 f=3.0mm≠2.8mm、
-        D105° 与 H/V 推 94.3° 矛盾）——FOV 兜底仅调试用，定案必须棋盘标定。
+        历史警示（2026-09-30）：BL-500W-335 规格表 H81.8°/V66° 自相矛盾（H 反推
+        f=3.0mm≠2.8mm），曾派生 fx≈1106/fy≈831 双口径悬案。2026-10-01 棋盘标定
+        28 视图定案：fx=1147.2/fy=1150.1（fy/fx=1.0025 方像元，HFOV 79.9°/
+        VFOV 50.3°）——规格表角度口径同样不实。兜底角一律用标定等效角
+        （见 load_intrinsics 缺省值），权威值=camera_calib.yaml。
         """
         fx = (width / 2.0) / math.tan(hfov_rad / 2.0)
         fy = fx if vfov_rad is None else (height / 2.0) / math.tan(vfov_rad / 2.0)
@@ -112,7 +113,8 @@ class Intrinsics:
                 errs.append(f'cy={self.cy:.0f} 偏离画面中心带')
         ratio = self.fy / max(self.fx, 1e-6)
         if not (0.5 <= ratio <= 2.0):
-            errs.append(f'fy/fx={ratio:.2f} 越界 [0.5,2.0]（16:9 裁剪合理值 ~0.75）')
+            errs.append(f'fy/fx={ratio:.2f} 越界 [0.5,2.0]（方像元合理值 ≈1.0，'
+                        f'2026-10-01 标定 fy/fx=1.0025）')
         if len(self.dist_coeffs) not in (0, 4, 5, 8):
             errs.append(f'畸变系数长度 {len(self.dist_coeffs)} 非法')
         if self.source == 'calib' and abs(self.dist_coeffs[0]) > 0.5:
@@ -132,10 +134,10 @@ class Intrinsics:
 
 
 def load_intrinsics(calib_path: Optional[str], width: int, height: int,
-                    hfov_rad: float = math.radians(81.8),
-                    vfov_rad: float = math.radians(66.0),
+                    hfov_rad: float = 1.39360,   # 2026-10-01 棋盘标定等效角
+                    vfov_rad: float = 0.87796,   # （fx=1147.18 / fy=1150.07@1080p）
                     allow_uncalibrated: bool = True) -> Tuple[Intrinsics, List[str]]:
-    """加载内参：calib yaml 优先，缺失/禁用时按 datasheet FOV 兜底。
+    """加载内参：calib yaml 优先，缺失/禁用时按标定等效角 FOV 兜底。
 
     返回 (内参, 告警列表)；比赛模式 allow_uncalibrated=False 且无标定文件 → 抛错。
     """
@@ -156,8 +158,9 @@ def load_intrinsics(calib_path: Optional[str], width: int, height: int,
     if not allow_uncalibrated:
         raise CalibrationError(
             f'未找到标定文件 {calib_path} 且 allow_uncalibrated=False（比赛模式必须先标定）')
-    warnings.append(f'无标定文件({calib_path})，按 datasheet FOV 推内参——直径/位置精度受限，'
-                    f'外场前必须完成棋盘格标定（scripts/calibrate_camera.py）')
+    warnings.append(f'无标定文件({calib_path})，按 2026-10-01 棋盘标定等效角推内参'
+                    f'（fx≈1147，cx/cy 取中心）——直径/位置精度略受限，比赛必须部署 '
+                    f'camera_calib.yaml（重标用 scripts/calibrate_camera.py）')
     intr = Intrinsics.from_fov(width, height, hfov_rad, vfov_rad)
     intr.validate()
     return intr, warnings

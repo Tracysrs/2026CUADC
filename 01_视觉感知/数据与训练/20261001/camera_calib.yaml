@@ -1,0 +1,21 @@
+camera: BL-500W-335
+source: calib
+method: chessboard 8x5 interior corners (calib.io 9x6-square template), square=0.025
+  nominal
+image_width: 1920
+image_height: 1080
+fx: 1147.18
+fy: 1150.07
+cx: 929.18
+cy: 548.04
+dist_coeffs:
+- 0.011857
+- -0.032332
+- 0.000537
+- -0.000915
+- -0.003781
+reproj_error_px: 0.261
+frames_used: 28
+calibrated_at: '2026-10-01'
+notes: 28 views 0.15~0.76m; fy/fx=1.0025; close/far bucket fx split 1.5% (fixed-focus
+  breathing at <0.35m); capture=01_视觉感知/数据与训练/20261001

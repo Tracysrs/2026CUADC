@@ -419,7 +419,7 @@ private:
     declare_parameter<int>("servo_channel_1", 9);                  // AUX 9/10
     declare_parameter<int>("servo_channel_2", 10);
     declare_parameter<double>("servo_stowed_pwm", 1100.0);
-    declare_parameter<double>("servo_release_pwm", 1900.0);
+    declare_parameter<double>("servo_release_pwm", 1700.0);
     declare_parameter<bool>("enable_release_output", false);       // 干跑开关
   }
 
@@ -2119,7 +2119,7 @@ private:
   std::pair<double, double> payload_offset_xy_[2] = {{0.0, 0.0}, {0.0, 0.0}};
   int servo_channel_[2] = {9, 10};
   double servo_stowed_pwm_ = 1100.0;
-  double servo_release_pwm_ = 1900.0;
+  double servo_release_pwm_ = 1700.0;
   bool enable_release_output_ = false;   ///< 干跑开关：false 只打日志不发舵机
 
   // ---- 坐标系缓存 ----

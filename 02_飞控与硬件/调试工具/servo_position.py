@@ -3,7 +3,7 @@
 
 用法: python servo_position.py [COM口] [舵机列表] [PWM]   默认 COM5、SERVO9,10、1100(收拢)
   装舵机盘：打到 1100 收拢位并保持，舵机盘齿相位按「闭合锁死」装（1100=初始安全位，见 02 册）；
-  释放位=1600（09-19 拍板）；打 1900=通道上限全开（⚠️ 瓶在位会真投放，先取瓶）。
+  释放位=1700（10-03 拍板，原 1600）；打 1900=通道上限全开（⚠️ 瓶在位会真投放，先取瓶）。
 保持期间每 5s 重发一次 DO_SET_SERVO 防丢失；Ctrl-C 或杀进程退出 = 断开会话，
 安全开关恢复、PWM 停发，舵机脱力（盘已装好则无碍，下次会话/上电仍归 1100）。
 判读同 servo_test.py：回读 SERVO_OUTPUT_RAW 实证飞控侧 PWM 真在走——
@@ -129,7 +129,7 @@ if ack is not None and ack.result == 0:
 else:
     print("[check2] !! 安全开关解除未确认——若 PWM 回读不动，先怀疑这个")
 
-print(f"\n[plan] 通道 {SERVOS} → 定位 {PWM}µs（{'收拢' if PWM == 1100 else '释放' if PWM == 1600 else '自定义'}），"
+print(f"\n[plan] 通道 {SERVOS} → 定位 {PWM}µs（{'收拢' if PWM == 1100 else '释放' if PWM == 1700 else '自定义'}），"
       "3 秒后开始，Ctrl-C 取消")
 try:
     for i in range(3, 0, -1):

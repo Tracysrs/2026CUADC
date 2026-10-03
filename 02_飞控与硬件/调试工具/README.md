@@ -79,7 +79,7 @@ CUAV V6X（ArduPilot 4.7-beta）+ ZD550 四轴的调试脚本集，2026-09-05 �
 
 | 脚本（命令） | 端 | 调试什么 |
 |---|---|---|
-| `servo_test.py`（`servo`） | 本机 | 投放时序测试（COM 直连版）：前提核验 → 解会话安全开关 → 1500 中位→1100 收拢→1600 释放时序；回读 SERVO_OUTPUT_RAW 判读——**PWM 走了而舵机不动 = 舵机没电**（UBEC 未注入/未共地），PWM 没走 = 飞控侧问题。⚠️ 拆桨纪律 |
+| `servo_test.py`（`servo`） | 本机 | 投放时序测试（COM 直连版）：前提核验 → 解会话安全开关 → 1500 中位→1100 收拢→1700 释放时序；回读 SERVO_OUTPUT_RAW 判读——**PWM 走了而舵机不动 = 舵机没电**（UBEC 未注入/未共地），PWM 没走 = 飞控侧问题。⚠️ 拆桨纪律 |
 | `servo_position.py`（无 ops 命令） | 本机 | 舵机定位保持：打到指定 PWM（默认 SERVO9,10 @1100 收拢位）并每 5s 重发，供装盘/装爪相位安装定位。⚠️ 打 1900 = 全开会**真投放**，先取瓶 |
 | `fc_servo_test.sh`（`servo-test`） | Jetson | 投放时序测试（mavros 版，PWM 口径与上同源）；`SERVO_NUM=10` 测 A2 |
 | `fc_servo_diag.sh`（`servo-diag`） | Jetson | 舵机不动时的二分诊断：解安全开关 + 抓 `/mavros/rc/out` 看 PWM 是否真在变值——变了 = 飞控输出正常、问题在舵机侧电气；没变 = 输出仍被门控 |

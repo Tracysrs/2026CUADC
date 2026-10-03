@@ -44,7 +44,7 @@ CMDS = {
     "dryrun":        ("fc_dryrun.sh",   "Jetson", "任务状态机干跑（无桨不解锁）: dryrun [秒数]"),
     "armrun":        ("fc_armrun.sh",   "Jetson", "解锁试跑·状态机路径（无 GPS 卡 WAIT_NAV_STABLE）"),
     "armtest":       ("fc_armtest.sh",  "Jetson", "解锁试跑·直接路径（CommandBool 10s）"),
-    "servo-test":    ("fc_servo_test.sh", "Jetson", "舵机投放时序（收1100/释1600）"),
+    "servo-test":    ("fc_servo_test.sh", "Jetson", "舵机投放时序（收1100/释1700）"),
     "servo-diag":    ("fc_servo_diag.sh", "Jetson", "舵机不动时诊断 /mavros/rc/out"),
     "onekey":        ("fc_mission_onekey.py", "Jetson", "任务全流程一键（冷启动自检→MAVROS→状态机→看护→摘要）：本机执行=自动 ssh 到 Jetson。用法: onekey <23|13|12> [--no-vision] [--auto-arm] [--live-drop]"),
     "log":           ("fc_log_pull.py", "Jetson", "拉 dataflash 日志: log list | log get 名字"),

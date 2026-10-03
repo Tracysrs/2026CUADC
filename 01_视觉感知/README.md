@@ -9,7 +9,7 @@
 | `数据与训练/build_real_data.py` | v2 实拍数据集构建脚本 |
 | `数据与训练/dataset_audit.py` + `test_dataset_audit.py` | 数据集审计器（09-20：类别/坐标越界/重复图片/session 泄漏，可接 CI） |
 | `数据与训练/v2训练流水线/` | `AutoDL租卡训练指南v2.md`（租卡→上传→一键训练→取结果）+ `run_v2_training.sh` 一键脚本（内含 v1 自动兜底） |
-| `数据与训练/barrel_seg_tools/` | 白筒/H 圆 seg 数据采集与合成工具（入口：`采集操作卡_白筒与H圆.md`） |
+| `数据与训练/barrel_seg_tools/` | 白筒/H 圆 seg 数据采集与合成工具（入口：`采集操作卡_白筒与H圆.md`；正式版执行入口：`实施方案_白筒正式版_外场600张到M2终验.md`，10-01） |
 | `数据与训练/deliver_v2/dataset_version.md` | 当前权威训练产物版本台账（09-12 交付，mAP50=0.963） |
 | `数据与训练/hazard_hgd_10cls_v2/dataset_version.md` | 10 类危化标识数据/权重版本台账 |
 

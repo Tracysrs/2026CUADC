@@ -33,7 +33,7 @@
 
     # ---- 主通道 engine（bucket.engine 就位 + SHA 登记后自动升级双通道）----
     engine_path: /home/nvidia/cuadc_models/bucket.engine
-    expected_sha256: ""       # deploy 后回填；空=跳过校验（仅限调试）
+    expected_sha256: "8f42e66294444cf81e62d86714a8587a2d8aca6285c2dd762ebc5ee58badb150"  # bucket.engine v2_20261002（val 151/337: box mAP50 0.988/R 0.964）
     imgsz: 640
     seg_conf_thres: 0.25
 

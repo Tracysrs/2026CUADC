@@ -35,12 +35,18 @@ camera)
   ;;
 mavros)
   pkill -f "mavros_[n]ode" 2>/dev/null; sleep 1
-  ros2 launch mavros apm.launch fcu_url:="$FCU_URL" > "$LOG/mavros.log" 2>&1 &
+  ros2 daemon stop >/dev/null 2>&1; sleep 1
+  # nohup 保命：stage 分次 ssh 调用时 mavros 须在会话退出后存活（2026-10-04 实测裸 & 随会话死）
+  nohup ros2 launch mavros apm.launch fcu_url:="$FCU_URL" > "$LOG/mavros.log" 2>&1 &
   sleep 5
   # 真机就绪判据 = /mavros/state connected:true（fcu_ready.py 的 TCP 探测只适用 SITL，勿用）
+  # 判据用流式 echo（--once 有 DDS 发现假阴性：2026-10-04 TELEM3 首联实测 mavros 实连而 --once 2 分钟全空，
+  # pymavlink 直探心跳 OK——11 册「ros2 topic echo --once 假阴性」家规第三次应验，故 2026-10-04 改流式；
+  # 同日深挖：假阴性真正根因=ros2 CLI daemon 僵死（两小时 pkill 风暴后发现图缓存不刷新，流式/--once 一起瞎，
+  # daemon stop 重启后话题立即可见），故上方增加 daemon 重启一步）
   CONN=""
   for i in $(seq 1 24); do
-    CONN=$(timeout 4 ros2 topic echo --once /mavros/state 2>/dev/null | grep -m1 'connected: true')
+    CONN=$(timeout 12 ros2 topic echo /mavros/state 2>/dev/null | grep -m1 'connected: true')
     [ -n "$CONN" ] && { echo "FCU 心跳 OK（第 ${i} 探）"; break; }
     sleep 5
   done

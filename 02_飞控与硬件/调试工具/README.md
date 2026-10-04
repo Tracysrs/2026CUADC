@@ -29,6 +29,7 @@ CUAV V6X（ArduPilot 4.7-beta）+ ZD550 四轴的调试脚本集，2026-09-05 �
 | `check_fc.py`（`fc`） | 本机 | 飞控连接自检：心跳 / 固件版本 / 机型 / 模式 / 电池 / 姿态。调试「脚本连不上飞控」「飞控现在到底啥状态」；COM 漂移时首参指定，如 `python check_fc.py COM17` |
 | `fc_link_test.py` | **Jetson**（单文件可单独拷机载） | Jetson↔飞控 MAVLink 链路自检：串口占用探测 / 心跳 / 固件版本 / PING RTT / 参数点名×4 / 消息流速率判据 / GPS·姿态快照，PASS 退 0 FAIL 退 1 可接脚本门禁。默认 `/dev/ttyTHS1:921600`（TELEM3，与 bench_m2_real.sh 同源），先停 mavros 再跑；用法 `python3 fc_link_test.py [连接串] [波特率] [观测秒]` |
 | `prearm_diag.py`（`prearm`） | 本机 | **解锁前门禁诊断（只读，不发解锁指令）**：模式合法性 / 油门是否低位 / RC RSSI / 电池 vs BATT_ARM_VOLT / EKF 收敛 / 罗盘一致性 / ARMING_CHECK 等门限参数 / 抓 STATUSTEXT。调试「推杆不解锁」（实测定位过 Compasses inconsistent、油门不在低位、EKF 缺位置） |
+| `fc_serial_bridge.py`（`bridge`） | 本机 | **FC 串口↔本机 TCP/UDP 桥（MP 半死连接绕接）**：MP 开得了口收不到数据（FC 实测流送正常）时，桥到 127.0.0.1:14550 换网络方式连。默认 TCP：`python fc_serial_bridge.py`，MP 口位选 TCP host 127.0.0.1 port 14550；UDP 用 `--mode udp`。坑注=口位认准描述 "ArduPilot MAVLink"（COM6 是 SLCAN 哑口）；pymavlink 不吃 pyserial 对象，GCS 心跳预生成 MAVLink1 包裸写 |
 | `force_arm_skipgps.py` | 本机 | **强制解锁前置（改动式，用完必复原）**：临时 `ARMING_SKIPCHK=1280` 只跳过 GPS/位置类解锁检查（09-24 室内首飞实证值），原值存 `_arming_skipchk_orig.txt`。跳过后仅限 STABILIZE 室内手动/无桨台架，GPS 模式（GUIDED/LOITER/RTL）不可用；户外飞前必须跑 `restore_arming.py` |
 | `restore_arming.py` | 本机 | **复原解锁检查**：读记录文件恢复 `ARMING_SKIPCHK` 原值（无记录回退常设值 1280；`--zero` 清零为全检查启用）。与 `force_arm_skipgps.py` 成对使用 |
 | `read_params.py` | 本机 | 读机架与关键串口参数（FRAME_CLASS / FRAME_TYPE / SERIAL1_PROTOCOL / BRD_BOARD_ID），确认固件与机架配置加载正确 |

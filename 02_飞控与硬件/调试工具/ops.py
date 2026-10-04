@@ -32,6 +32,7 @@ CMDS = {
     "params-load":   ("load_params.py",  "阶段0", "参数文件导入（默认两遍+重启）: params-load [COM口] <参数文件>"),
     "read-params":   ("read_params.py", "阶段0", "读机架/串口等指定参数"),
     "lazy-params":   ("activate_lazy_params.py", "阶段0", "激活懒加载参数组并重启（4.7-beta 特性）"),
+    "bridge":        ("fc_serial_bridge.py", "阶段0", "FC串口↔TCP/UDP桥（MP半死连接绕接，Ctrl+C停）: bridge [--mode udp]"),
     # ---- 阶段 1/2：上电检查 ----
     "gps":           ("check_gps.py",   "阶段2", "GPS 验收（3D Fix + ≥8星 + HDOP<1.5）"),
     "radio":         ("check_radio.py", "阶段2", "数传诊断（默认 COM10，只读；严禁 ATI5）"),

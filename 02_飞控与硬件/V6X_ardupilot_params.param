@@ -75,7 +75,7 @@ FS_THR_ENABLE,5
 # 省 ¥300+（省下的预算买反火花总开关，规则2.3"人工切断动力安全开关"载体）
 # 接线：iA6B 的 PPM/CH1 → PPM IN 专用口（⚠️ 针序镜像：飞控中间针是信号，见 09-09 日志）
 # 通道规划：
-#   CH5 = 飞行模式（遥控器 SWC 三段对应：Stabilize/AltHold/Loiter）
+#   CH5 = 飞行模式（遥控器 SWC 三段对应：低 Stabilize / 中 空（预留）/ 高 Guided——2026-10-04 拍板，FLTMODE1=0/FLTMODE3=0/FLTMODE6=4；RTL 不在开关上由 failsafe 承担）
 #   CH6 = 急停（遥控器 SWA 两段对应；2026-09-25 按实物勘正：FS-i6 出厂 SWA 两挡、SWB/SWC 三挡，旧文 SWA/SWC 写反）
 # 比赛上场 FS_THR_ENABLE 改 0（见 §3），CH6 急停拨杆即细则 5.8 的"紧急停止"
 # ⚠️ 遥控器端 failsafe 必须设 No pulses（RX SETUP → FAILSAFE；出厂"保持"会掩盖断链）
